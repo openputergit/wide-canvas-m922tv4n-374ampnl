@@ -1,0 +1,3032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mental Health Assistant - AGI Corp</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.skypack.dev/three@0.132.2"></script>
+    <script src="https://cdn.skypack.dev/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .neu-brutal {
+            border: 3px solid #000;
+            box-shadow: 5px 5px 0px #000;
+            transition: all 0.2s ease;
+        }
+        .neu-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px #000;
+        }
+        .agent-card {
+            background: white;
+            border: 2px solid #000;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.2s ease;
+        }
+        .agent-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #000;
+        }
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        #threeCanvas {
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+        }
+        #mindMapContainer {
+            width: 100%;
+            height: 500px;
+            overflow: hidden;
+            position: relative;
+        }
+        .agent-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .agent-node:hover {
+            filter: brightness(1.2);
+        }
+        .menu-btn {
+            background: #9929bd;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .menu-btn:hover {
+            background: #7a2096;
+            transform: translateY(-2px);
+        }
+        /* Tabs */
+        .tab-active {
+            border-bottom: 3px solid #9929bd;
+            color: #9929bd;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .full-screen-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 9999;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #chatOutput {
+            transition: all 0.3s ease;
+        }
+        .agent-category-link {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .agent-category-link:hover {
+            color: #9929bd;
+            font-weight: 600;
+        }
+        .agent-in-swarm {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .agent-in-swarm:hover {
+            background-color: rgba(153, 41, 189, 0.1);
+        }
+        #fullSwarmMap {
+            width: 100%;
+            height: 700px;
+            overflow: hidden;
+            position: relative;
+            background-color: #f9f9f9;
+        }
+        .agent-thought-process {
+            background-color: #f8f9fa;
+            border-left: 4px solid #9929bd;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            display: none;
+        }
+        .agent-references {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #6c757d;
+            display: none;
+        }
+        .resource-card {
+            background: white;
+            border: 2px solid #000;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.2s ease;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .resource-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #000;
+        }
+        #resourceSearchInput {
+            font-size: 1rem;
+            padding: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white neu-brutal m-4 p-4">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center">
+                <img src="https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/logos%2FAGI%20Logo%20%20(simple).png?alt=media&token=f2893288-6d11-4bba-b702-fc8c3a1cd797" alt="AGI Corp Logo" class="h-12">
+                <div class="ml-4">
+                    <h1 class="text-2xl font-bold">Mental Health Assistant</h1>
+                    <p class="text-sm text-gray-600">Always Here, Always Understanding</p>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center space-x-4">
+                <button id="agentSwarmBtn" class="menu-btn px-4 py-2 neu-brutal">Agent Swarm</button>
+                <button id="moodTrackingBtn" class="menu-btn px-4 py-2 neu-brutal">Mood Tracking</button>
+                <button id="interactionBtn" class="menu-btn px-4 py-2 neu-brutal">Agent Interaction</button>
+                <button id="resourcesBtn" class="menu-btn px-4 py-2 neu-brutal">Resources</button>
+            </div>
+            <!-- Mobile Menu Button -->
+            <div class="md:hidden">
+                <button id="mobileMenuBtn" class="p-2">
+                    <i class="bi bi-list text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden mt-4 space-y-2">
+            <button id="mobileAgentSwarmBtn" class="menu-btn w-full px-4 py-2 neu-brutal">Agent Swarm</button>
+            <button id="mobileMoodTrackingBtn" class="menu-btn w-full px-4 py-2 neu-brutal">Mood Tracking</button>
+            <button id="mobileInteractionBtn" class="menu-btn w-full px-4 py-2 neu-brutal">Agent Interaction</button>
+            <button id="mobileResourcesBtn" class="menu-btn w-full px-4 py-2 neu-brutal">Resources</button>
+        </div>
+        
+        <!-- Welcome message -->
+        <div class="mt-4 px-4 py-3 bg-gray-50 rounded-lg">
+            <p class="text-base">Meet Your Digital Wellness Collective: A Powerful, Interconnected Network of AGI Agents Delivering Real-Time Mental Health Solutions and Insights.</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Agent Swarm Section -->
+        <section id="agentSwarmSection" class="mb-6 neu-brutal bg-white p-4">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="bi bi-diagram-3 mr-2"></i> Agent Swarm Mind Map
+            </h2>
+            
+            <!-- Agent Category Selection -->
+            <div class="mb-4">
+                <select id="agentCategory" class="w-full p-2 neu-brutal">
+                    <option value="all">All Agents</option>
+                    <option value="management">Management & Strategy</option>
+                    <option value="data">Data & Profile Gathering</option>
+                    <option value="knowledge">Knowledge & Research</option>
+                    <option value="assessment">Assessment & Diagnosis</option>
+                    <option value="therapy">Therapy Planning</option>
+                    <option value="engagement">Patient Engagement</option>
+                    <option value="crisis">Crisis Monitoring</option>
+                    <option value="privacy">Privacy & Ethics</option>
+                    <option value="progress">Progress Tracking</option>
+                    <option value="learning">Continuous Learning</option>
+                </select>
+            </div>
+            
+            <!-- Mind Map Visualization -->
+            <div id="mindMapContainer" class="neu-brutal mb-4 bg-gray-50">
+                <!-- 3D Mind Map will be rendered here -->
+            </div>
+            
+            <!-- Agent List -->
+            <div class="mb-4">
+                <h3 class="font-bold mb-2">Agents in Selected Category</h3>
+                <div id="agentList" class="h-64 overflow-y-auto p-2 neu-brutal bg-gray-50">
+                    <!-- Agents will be dynamically loaded here -->
+                    <p class="text-gray-500 italic">Select a category to view agents</p>
+                </div>
+            </div>
+            
+            <!-- Agent Details -->
+            <div id="agentDetails" class="hidden neu-brutal p-3 bg-gray-50">
+                <div class="flex justify-between items-start">
+                    <h3 id="agentDetailName" class="font-bold text-lg"></h3>
+                    <button id="closeAgentDetail" class="text-gray-600 hover:text-gray-800">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <p id="agentDetailRole" class="text-sm text-gray-600 mb-2"></p>
+                <p id="agentDetailDesc" class="mb-2"></p>
+                <div>
+                    <h4 class="font-semibold mb-1">Tools & Knowledge Access:</h4>
+                    <ul id="agentDetailTools" class="list-disc pl-5 text-sm"></ul>
+                </div>
+                <button id="askAgentBtn" class="mt-3 bg-[#9929bd] text-white p-2 neu-brutal hover:bg-[#7a2096] w-full">
+                    Ask this agent a question
+                </button>
+            </div>
+            
+            <!-- Full Swarm View -->
+            <div id="fullSwarmView" class="mt-4">
+                <h3 class="font-bold mb-2">Complete Agent Swarm Network</h3>
+                <div id="fullSwarmMap" class="neu-brutal"></div>
+                <div class="mt-2 text-sm text-gray-500">
+                    <p>Showing connections between 100 specialized mental health agents. Each color represents a different agent category.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resourcesSection" class="mb-6 neu-brutal bg-white p-4 hidden">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="bi bi-journal-text mr-2"></i> Mental Health Resources
+            </h2>
+            
+            <!-- Search Bar -->
+            <div class="mb-4">
+                <div class="relative">
+                    <input type="text" id="resourceSearchInput" placeholder="Search for resources, articles, or techniques..." 
+                        class="w-full p-3 pr-10 neu-brutal">
+                    <button id="resourceSearchBtn" class="absolute right-3 top-3 text-gray-600">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Resource Categories -->
+            <div class="flex flex-wrap mb-4 gap-2">
+                <button class="resource-category-btn bg-[#9929bd] text-white px-3 py-1 rounded-full text-sm hover:bg-[#7a2096] active"
+                    data-category="all">All Resources</button>
+                <button class="resource-category-btn bg-gray-200 px-3 py-1 rounded-full text-sm hover:bg-[#9929bd] hover:text-white"
+                    data-category="therapy">Therapy Techniques</button>
+                <button class="resource-category-btn bg-gray-200 px-3 py-1 rounded-full text-sm hover:bg-[#9929bd] hover:text-white"
+                    data-category="research">Latest Research</button>
+                <button class="resource-category-btn bg-gray-200 px-3 py-1 rounded-full text-sm hover:bg-[#9929bd] hover:text-white"
+                    data-category="selfcare">Self-Care</button>
+                <button class="resource-category-btn bg-gray-200 px-3 py-1 rounded-full text-sm hover:bg-[#9929bd] hover:text-white"
+                    data-category="crisis">Crisis Resources</button>
+                <button class="resource-category-btn bg-gray-200 px-3 py-1 rounded-full text-sm hover:bg-[#9929bd] hover:text-white"
+                    data-category="professional">Professional Help</button>
+            </div>
+            
+            <!-- Resources List -->
+            <div id="resourcesList" class="mt-4">
+                <!-- Resources will be loaded here dynamically -->
+                <div class="resource-card">
+                    <div class="flex justify-between">
+                        <h3 class="font-bold">Cognitive Behavioral Therapy for Depression</h3>
+                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Therapy Techniques</span>
+                    </div>
+                    <p class="text-sm mt-2">A comprehensive guide to CBT techniques specifically targeted at treating depression symptoms, including thought challenging and behavioral activation.</p>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs text-gray-500">American Psychological Association, 2023</span>
+                        <a href="#" class="text-[#9929bd] text-sm flex items-center">
+                            <i class="bi bi-download mr-1"></i> Download PDF
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="resource-card">
+                    <div class="flex justify-between">
+                        <h3 class="font-bold">Mindfulness Practices for Anxiety Management</h3>
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Self-Care</span>
+                    </div>
+                    <p class="text-sm mt-2">Research-backed mindfulness exercises and practices that can be implemented daily to reduce anxiety symptoms and improve emotional regulation.</p>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Journal of Clinical Psychology, 2024</span>
+                        <a href="#" class="text-[#9929bd] text-sm flex items-center">
+                            <i class="bi bi-download mr-1"></i> Download PDF
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="resource-card">
+                    <div class="flex justify-between">
+                        <h3 class="font-bold">Crisis Response: Safety Planning Protocol</h3>
+                        <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Crisis Resources</span>
+                    </div>
+                    <p class="text-sm mt-2">A step-by-step guide for creating personalized safety plans for individuals experiencing suicidal ideation or in mental health crisis situations.</p>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs text-gray-500">National Suicide Prevention Lifeline, 2023</span>
+                        <a href="#" class="text-[#9929bd] text-sm flex items-center">
+                            <i class="bi bi-download mr-1"></i> Download PDF
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="resource-card">
+                    <div class="flex justify-between">
+                        <h3 class="font-bold">Digital Therapeutics: New Frontiers in Mental Health Treatment</h3>
+                        <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Latest Research</span>
+                    </div>
+                    <p class="text-sm mt-2">A comprehensive review of emerging digital therapeutic approaches and their efficacy in treating various mental health conditions.</p>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Digital Health Journal, 2024</span>
+                        <a href="#" class="text-[#9929bd] text-sm flex items-center">
+                            <i class="bi bi-download mr-1"></i> Download PDF
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="resource-card">
+                    <div class="flex justify-between">
+                        <h3 class="font-bold">Finding the Right Therapist: A Guide for Patients</h3>
+                        <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Professional Help</span>
+                    </div>
+                    <p class="text-sm mt-2">Practical guidance on how to identify, evaluate, and select a therapist who aligns with your needs, preferences, and treatment goals.</p>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs text-gray-500">Mental Health America, 2023</span>
+                        <a href="#" class="text-[#9929bd] text-sm flex items-center">
+                            <i class="bi bi-download mr-1"></i> Download PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Download All Button -->
+            <div class="mt-5 flex justify-center">
+                <button id="downloadAllResourcesBtn" class="bg-[#9929bd] text-white px-6 py-3 neu-brutal hover:bg-[#7a2096] flex items-center">
+                    <i class="bi bi-download mr-2"></i> Download Complete Resource Library
+                </button>
+            </div>
+        </section>
+
+        <!-- Tools Section (Mood Tracking and Agent Interaction) -->
+        <section id="toolSection" class="mb-6 hidden">
+            <div class="flex mb-4 border-b">
+                <button id="moodTrackingTab" class="flex-1 py-2 px-4 tab-active">Mood Tracking</button>
+                <button id="agentInteractionTab" class="flex-1 py-2 px-4">Agent Interaction</button>
+            </div>
+            
+            <!-- Mood Tracking Content -->
+            <div id="moodTrackingContent" class="tab-content active neu-brutal bg-white p-4">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="bi bi-graph-up mr-2"></i> Mood Tracking
+                </h2>
+                
+                <!-- Variable Selection Tabs -->
+                <div class="flex flex-wrap mb-4 border-b overflow-x-auto">
+                    <button class="mood-variable-tab py-2 px-4 tab-active" data-variable="mood">Mood Level</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="anxiety">Anxiety</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="depression">Depression</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="sleep">Sleep</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="energy">Energy</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="focus">Focus</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="stress">Stress</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="motivation">Motivation</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="social">Social</button>
+                    <button class="mood-variable-tab py-2 px-4" data-variable="physical">Physical</button>
+                </div>
+                
+                <!-- Chart Area -->
+                <div class="chart-container mb-4 neu-brutal bg-gray-50 p-2">
+                    <canvas id="moodChart"></canvas>
+                </div>
+                
+                <!-- Input Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="neu-brutal p-2">
+                        <label class="block text-sm font-medium">Variable</label>
+                        <select class="w-full p-2 border" id="variableSelect">
+                            <option value="mood">Mood Level</option>
+                            <option value="anxiety">Anxiety Level</option>
+                            <option value="depression">Depression Level</option>
+                            <option value="sleep">Sleep Quality</option>
+                            <option value="energy">Energy Level</option>
+                            <option value="focus">Focus</option>
+                            <option value="stress">Stress Level</option>
+                            <option value="motivation">Motivation</option>
+                            <option value="social">Social Interaction</option>
+                            <option value="physical">Physical Health</option>
+                        </select>
+                    </div>
+                    <div class="neu-brutal p-2">
+                        <label class="block text-sm font-medium">Level (1-10)</label>
+                        <input type="number" min="1" max="10" class="w-full p-2 border" id="moodInput" value="5">
+                    </div>
+                    <div class="neu-brutal p-2">
+                        <label class="block text-sm font-medium">Note (optional)</label>
+                        <input type="text" class="w-full p-2 border" id="moodNote" placeholder="Add context to your entry">
+                    </div>
+                </div>
+                
+                <button onclick="trackMood()" class="w-full bg-[#9929bd] text-white p-2 neu-brutal hover:bg-[#7a2096] flex items-center justify-center">
+                    <i class="bi bi-plus-circle mr-2"></i> Log Entry
+                </button>
+                
+                <!-- Data Summary -->
+                <div class="mt-4 neu-brutal p-3 bg-gray-50">
+                    <h3 class="font-bold mb-2">Summary</h3>
+                    <div id="moodSummary" class="text-sm">
+                        <p>Track your first mood entry to see insights.</p>
+                    </div>
+                    <div class="mt-2 flex justify-end space-x-2">
+                        <button id="downloadMoodData" class="text-sm flex items-center text-[#9929bd]">
+                            <i class="bi bi-download mr-1"></i> Download Data
+                        </button>
+                        <button id="viewChartsBtn" class="text-sm flex items-center text-[#9929bd]">
+                            <i class="bi bi-bar-chart-fill mr-1"></i> View All Charts
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- All Charts View (Hidden by default) -->
+                <div id="allChartsView" class="hidden mt-4">
+                    <h3 class="font-bold mb-2">All Variables Overview</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="moodOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="anxietyOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="depressionOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="sleepOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="energyOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="focusOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="stressOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="motivationOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="socialOverviewChart"></canvas>
+                        </div>
+                        <div class="chart-container neu-brutal bg-gray-50 p-2">
+                            <canvas id="physicalOverviewChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Agent Interaction Content -->
+            <div id="agentInteractionContent" class="tab-content neu-brutal bg-white p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <i class="bi bi-chat-dots mr-2"></i> Agent Interaction
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button id="toggleFullScreenChat" class="bg-gray-200 p-2 rounded" title="Toggle Fullscreen">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                        <button id="downloadChatBtn" class="bg-gray-200 p-2 rounded" title="Download Conversation">
+                            <i class="bi bi-download"></i>
+                        </button>
+                        <button id="showAgentThoughtsBtn" class="bg-gray-200 p-2 rounded" title="Show Agent Thought Process">
+                            <i class="bi bi-lightbulb"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="chatOutput" class="h-96 overflow-y-auto p-3 mb-4 neu-brutal bg-gray-50"></div>
+                
+                <div class="flex items-center mb-2">
+                    <button id="voiceInputBtn" class="bg-[#9929bd] text-white p-2 mr-2 rounded-full" title="Voice Input">
+                        <i class="bi bi-mic-fill"></i>
+                    </button>
+                    <textarea id="userInput" maxlength="15000" placeholder="Enter your message here (max 15000 characters)" 
+                        class="w-full p-3 neu-brutal" rows="5"></textarea>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="sendMessage()" class="flex-1 bg-[#9929bd] text-white p-2 neu-brutal hover:bg-[#7a2096] flex items-center justify-center">
+                        <i class="bi bi-send mr-2"></i> Send Message
+                    </button>
+                    <input type="file" id="fileInput" accept=".pdf,.csv,.mol,.png" class="hidden">
+                    <button onclick="document.getElementById('fileInput').click()" 
+                        class="bg-gray-200 p-2 neu-brutal hover:bg-gray-300">
+                        <i class="bi bi-paperclip"></i>
+                    </button>
+                </div>
+                
+                <div class="mt-4 text-xs text-gray-500">
+                    <p>This chat interface can process files up to 10MB. Supported formats: PDF, CSV, MOL, PNG.</p>
+                </div>
+                
+                <!-- Workflow Diagram Button -->
+                <div class="mt-4 flex justify-center">
+                    <button id="showWorkflowBtn" class="bg-gray-200 p-2 neu-brutal hover:bg-gray-300 text-sm flex items-center">
+                        <i class="bi bi-diagram-3 mr-2"></i> Show Agent Swarm Workflow Diagram
+                    </button>
+                </div>
+                
+                <!-- Agent Workflow Diagram (Hidden by default) -->
+                <div id="agentWorkflowDiagram" class="hidden mt-4 p-4 neu-brutal bg-gray-50">
+                    <h3 class="font-bold mb-2">Agent Swarm Workflow</h3>
+                    <div id="workflowDiagramContainer" class="w-full h-96 bg-white rounded"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white neu-brutal m-4 p-4 mt-8">
+        <div class="container mx-auto text-center">
+            <p class="text-lg font-semibold mb-2">Always Here, Always Understanding</p>
+            <p class="text-sm text-gray-600 mb-2">AGI Corp 2025</p>
+            <div class="flex justify-center items-center space-x-4">
+                <p class="flex items-center"><i class="bi bi-telephone mr-1"></i> (309) CLA-RITY (309) 252-7489</p>
+                <p class="flex items-center"><i class="bi bi-envelope mr-1"></i> x@agi.holdings</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="loading" id="loadingIndicator">
+        <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-[#9929bd]"></div>
+    </div>
+
+    <!-- Voice Input Indicator Modal -->
+    <div id="voiceInputModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg neu-brutal">
+            <div class="text-center">
+                <div class="mb-4 text-[#9929bd]">
+                    <i class="bi bi-mic-fill text-5xl animate-pulse"></i>
+                </div>
+                <p class="text-lg font-medium">Listening...</p>
+                <p id="voiceTranscript" class="mt-2 text-gray-600 italic">Speak now</p>
+                <button id="stopVoiceBtn" class="mt-4 bg-[#9929bd] text-white px-4 py-2 rounded-full">
+                    <i class="bi bi-stop-fill mr-1"></i> Stop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            moodData: {
+                mood: { values: [], labels: [], notes: [] },
+                anxiety: { values: [], labels: [], notes: [] },
+                depression: { values: [], labels: [], notes: [] },
+                sleep: { values: [], labels: [], notes: [] },
+                energy: { values: [], labels: [], notes: [] },
+                focus: { values: [], labels: [], notes: [] },
+                stress: { values: [], labels: [], notes: [] },
+                motivation: { values: [], labels: [], notes: [] },
+                social: { values: [], labels: [], notes: [] },
+                physical: { values: [], labels: [], notes: [] }
+            },
+            currentVariable: 'mood',
+            agentSwarm: {},
+            activeSection: 'agentSwarm',
+            showAgentThoughts: false,
+            overviewCharts: {}
+        };
+
+        // Initialize mood tracking chart
+        const ctx = document.getElementById('moodChart').getContext('2d');
+        const moodChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Mood Level',
+                    data: [],
+                    borderColor: '#9929bd',
+                    backgroundColor: 'rgba(153, 41, 189, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const dataIndex = context.dataIndex;
+                                const notes = state.moodData[state.currentVariable].notes || [];
+                                return notes[dataIndex] ? `Note: ${notes[dataIndex]}` : '';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize overview charts
+        function initializeOverviewCharts() {
+            const variables = ['mood', 'anxiety', 'depression', 'sleep', 'energy', 'focus', 'stress', 'motivation', 'social', 'physical'];
+            const variableLabels = {
+                'mood': 'Mood Level',
+                'anxiety': 'Anxiety Level',
+                'depression': 'Depression Level',
+                'sleep': 'Sleep Quality',
+                'energy': 'Energy Level',
+                'focus': 'Focus Level',
+                'stress': 'Stress Level',
+                'motivation': 'Motivation Level',
+                'social': 'Social Interaction',
+                'physical': 'Physical Health'
+            };
+            
+            variables.forEach(variable => {
+                const canvas = document.getElementById(`${variable}OverviewChart`);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    state.overviewCharts[variable] = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: variableLabels[variable],
+                                data: [],
+                                borderColor: '#9929bd',
+                                backgroundColor: 'rgba(153, 41, 189, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 10,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // Track mood function
+        function trackMood() {
+            const moodLevel = document.getElementById('moodInput').value;
+            const variable = document.getElementById('variableSelect').value;
+            const note = document.getElementById('moodNote').value;
+            
+            if (moodLevel && variable) {
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString();
+                const dateTimeLabel = now.toLocaleString();
+                
+                // Update state
+                if (!state.moodData[variable]) {
+                    state.moodData[variable] = { values: [], labels: [], notes: [] };
+                }
+                
+                state.moodData[variable].values.push(moodLevel);
+                state.moodData[variable].labels.push(timeLabel);
+                state.moodData[variable].notes.push(note);
+                
+                // Display on active chart
+                updateMoodChart();
+                
+                // Update all overview charts
+                updateOverviewCharts();
+                
+                // Update summary
+                updateMoodSummary();
+                
+                // Clear inputs
+                document.getElementById('moodInput').value = 5;
+                document.getElementById('moodNote').value = '';
+                
+                // Feedback to user
+                showToast('Entry logged successfully');
+            }
+        }
+        
+        // Update mood chart based on selected variable
+        function updateMoodChart() {
+            const variable = state.currentVariable;
+            const data = state.moodData[variable];
+            
+            moodChart.data.labels = data.labels;
+            moodChart.data.datasets[0].data = data.values;
+            
+            // Update chart label
+            const variableLabels = {
+                'mood': 'Mood Level',
+                'anxiety': 'Anxiety Level',
+                'depression': 'Depression Level',
+                'sleep': 'Sleep Quality',
+                'energy': 'Energy Level',
+                'focus': 'Focus Level',
+                'stress': 'Stress Level',
+                'motivation': 'Motivation Level',
+                'social': 'Social Interaction',
+                'physical': 'Physical Health'
+            };
+            
+            moodChart.data.datasets[0].label = variableLabels[variable] || variable;
+            moodChart.update();
+        }
+        
+        // Update all overview charts with current data
+        function updateOverviewCharts() {
+            Object.keys(state.overviewCharts).forEach(variable => {
+                const chart = state.overviewCharts[variable];
+                const data = state.moodData[variable];
+                
+                if (chart && data && data.labels && data.values) {
+                    chart.data.labels = data.labels;
+                    chart.data.datasets[0].data = data.values;
+                    chart.update();
+                }
+            });
+        }
+        
+        // Update mood summary
+        function updateMoodSummary() {
+            const summaryDiv = document.getElementById('moodSummary');
+            
+            // Total entries
+            const totalEntries = Object.values(state.moodData).reduce((sum, data) => {
+                return sum + (data.values ? data.values.length : 0);
+            }, 0);
+            
+            // Calculate averages for each variable
+            let summaryHTML = `<p>Total entries: ${totalEntries}</p>`;
+            
+            if (totalEntries > 0) {
+                summaryHTML += '<ul class="list-disc pl-5 mt-2">';
+                
+                for (const [variable, data] of Object.entries(state.moodData)) {
+                    if (data.values && data.values.length > 0) {
+                        const sum = data.values.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+                        const avg = (sum / data.values.length).toFixed(1);
+                        
+                        const variableLabels = {
+                            'mood': 'Mood Level',
+                            'anxiety': 'Anxiety Level',
+                            'depression': 'Depression Level',
+                            'sleep': 'Sleep Quality',
+                            'energy': 'Energy Level',
+                            'focus': 'Focus Level',
+                            'stress': 'Stress Level',
+                            'motivation': 'Motivation Level',
+                            'social': 'Social Interaction',
+                            'physical': 'Physical Health'
+                        };
+                        
+                        const label = variableLabels[variable] || variable;
+                        summaryHTML += `<li>${label}: ${avg}/10 avg (${data.values.length} entries)</li>`;
+                    }
+                }
+                
+                summaryHTML += '</ul>';
+            }
+            
+            summaryDiv.innerHTML = summaryHTML;
+        }
+        
+        // Download mood data as CSV
+        document.getElementById('downloadMoodData').addEventListener('click', function() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // Header row
+            const headers = ["Timestamp", "Variable", "Value", "Note"];
+            csvContent += headers.join(",") + "\r\n";
+            
+            // Data rows
+            for (const [variable, data] of Object.entries(state.moodData)) {
+                if (data.values && data.values.length > 0) {
+                    for (let i = 0; i < data.values.length; i++) {
+                        const row = [
+                            data.labels[i],
+                            variable,
+                            data.values[i],
+                            (data.notes && data.notes[i]) ? `"${data.notes[i].replace(/"/g, '""')}"` : ""
+                        ];
+                        csvContent += row.join(",") + "\r\n";
+                    }
+                }
+            }
+            
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "mood_tracking_data.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+        
+        // Variable tab switching
+        document.querySelectorAll('.mood-variable-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Update active tab styling
+                document.querySelectorAll('.mood-variable-tab').forEach(t => {
+                    t.classList.remove('tab-active');
+                });
+                this.classList.add('tab-active');
+                
+                // Update current variable and chart
+                state.currentVariable = this.getAttribute('data-variable');
+                updateMoodChart();
+            });
+        });
+
+        // View all charts button
+        document.getElementById('viewChartsBtn').addEventListener('click', function() {
+            const allChartsView = document.getElementById('allChartsView');
+            if (allChartsView.classList.contains('hidden')) {
+                allChartsView.classList.remove('hidden');
+                updateOverviewCharts();
+                this.innerHTML = '<i class="bi bi-eye-slash-fill mr-1"></i> Hide Charts';
+            } else {
+                allChartsView.classList.add('hidden');
+                this.innerHTML = '<i class="bi bi-bar-chart-fill mr-1"></i> View All Charts';
+            }
+        });
+
+        // Chat functionality
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const output = document.getElementById('chatOutput');
+            const message = input.value.trim();
+            
+            if (message) {
+                // Add user message to chat
+                output.innerHTML += `<div class="mb-3 pb-2 border-b border-gray-200">
+                    <div class="font-semibold text-[#9929bd] mb-1">You:</div>
+                    <div>${message}</div>
+                </div>`;
+                
+                output.scrollTop = output.scrollHeight;
+                
+                // Show loading indicator
+                const loading = document.getElementById('loadingIndicator');
+                loading.style.display = 'block';
+                
+                try {
+                    const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/ai', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            messages: [{
+                                role: 'user',
+                                content: [{ type: 'text', text: message }]
+                            }]
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    // Mock thought process for demonstration
+                    const thoughtProcess = `Processing query related to ${message.length > 30 ? message.substring(0, 30) + '...' : message}
+- Analyzing emotional context and intent
+- Evaluating which agents should handle this query
+- Consulting knowledge base for relevant information
+- Formulating response with appropriate tone and empathy`;
+                    
+                    const references = `[1] Therapeutic techniques database
+[2] Clinical guidelines for mental health support
+[3] User history and preferences`;
+                    
+                    // Add agent response to chat
+                    output.innerHTML += `<div class="mb-3 pb-2 border-b border-gray-200 bg-gray-50 p-2 rounded">
+                        <div class="font-semibold text-[#9929bd] mb-1">Mental Health Assistant:</div>
+                        <div>${data.message}</div>
+                        <div class="agent-thought-process">${thoughtProcess}</div>
+                        <div class="agent-references">${references}</div>
+                    </div>`;
+                    
+                    output.scrollTop = output.scrollHeight;
+                    input.value = '';
+                } catch (error) {
+                    console.error('Error:', error);
+                    output.innerHTML += `<div class="mb-3 pb-2 border-b border-gray-200 bg-red-50 p-2 rounded">
+                        <div class="font-semibold text-red-600 mb-1">Error:</div>
+                        <div>Could not process request. Please try again later.</div>
+                    </div>`;
+                }
+                
+                loading.style.display = 'none';
+            }
+        }
+
+        // Toggle agent thought process display
+        document.getElementById('showAgentThoughtsBtn').addEventListener('click', function() {
+            state.showAgentThoughts = !state.showAgentThoughts;
+            const thoughtProcessElements = document.querySelectorAll('.agent-thought-process');
+            const referencesElements = document.querySelectorAll('.agent-references');
+            
+            if (state.showAgentThoughts) {
+                thoughtProcessElements.forEach(el => el.style.display = 'block');
+                referencesElements.forEach(el => el.style.display = 'block');
+                this.innerHTML = '<i class="bi bi-lightbulb-fill"></i>';
+                this.title = 'Hide Agent Thought Process';
+            } else {
+                thoughtProcessElements.forEach(el => el.style.display = 'none');
+                referencesElements.forEach(el => el.style.display = 'none');
+                this.innerHTML = '<i class="bi bi-lightbulb"></i>';
+                this.title = 'Show Agent Thought Process';
+            }
+        });
+
+        // Toggle chat fullscreen mode
+        document.getElementById('toggleFullScreenChat').addEventListener('click', function() {
+            const chatOutput = document.getElementById('chatOutput');
+            chatOutput.classList.toggle('full-screen-mode');
+            
+            if (chatOutput.classList.contains('full-screen-mode')) {
+                this.innerHTML = '<i class="bi bi-fullscreen-exit"></i>';
+                this.title = 'Exit Fullscreen';
+            } else {
+                this.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>';
+                this.title = 'Toggle Fullscreen';
+            }
+        });
+
+        // Download chat conversation
+        document.getElementById('downloadChatBtn').addEventListener('click', function() {
+            const chatOutput = document.getElementById('chatOutput');
+            const chatText = chatOutput.innerText;
+            
+            // Create blob and download
+            const blob = new Blob([chatText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            
+            link.href = url;
+            link.download = 'mental_health_conversation.txt';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+
+        // Handle file input
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const output = document.getElementById('chatOutput');
+                
+                // Show loading
+                const loading = document.getElementById('loadingIndicator');
+                loading.style.display = 'block';
+                
+                try {
+                    // Create FormData and append file
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('userId', 'user123');
+                    formData.append('appSlug', 'mental-health-assistant-2025');
+                    
+                    // Upload the file
+                    const uploadResponse = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/storage/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12'
+                        },
+                        body: formData
+                    });
+                    
+                    const uploadData = await uploadResponse.json();
+                    
+                    if (uploadData.success) {
+                        // File uploaded successfully, now send to AI for analysis
+                        output.innerHTML += `<div class="mb-3 pb-2 border-b border-gray-200">
+                            <div class="font-semibold text-[#9929bd] mb-1">You:</div>
+                            <div>Uploaded file: ${file.name}</div>
+                        </div>`;
+                        
+                        // Send file URL to AI for analysis
+                        const aiResponse = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/ai', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer M3zUtQkKKuSEJc42z7B8Aiy3oO12',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                messages: [{
+                                    role: 'user',
+                                    content: [
+                                        {
+                                            type: 'text',
+                                            text: `Please analyze this ${file.type} file: ${file.name}`
+                                        },
+                                        {
+                                            type: 'image_url',
+                                            image_url: {
+                                                url: uploadData.url
+                                            }
+                                        }
+                                    ]
+                                }]
+                            })
+                        });
+                        
+                        const aiData = await aiResponse.json();
+                        
+                        output.innerHTML += `<div class="mb-3 pb-2 border-b border-gray-200 bg-gray-50 p-2 rounded">
+                            <div class="font-semibold text-[#9929bd] mb-1">Mental Health Assistant:</div>
+                            <div>${aiData.message}</div>
+                        </div>`;
+                    } else {
+                        throw new Error('File upload failed');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    output.innerHTML += `<div class="mb-3 pb-2 border-b border-gray-200 bg-red-50 p-2 rounded">
+                        <div class="font-semibold text-red-600 mb-1">Error:</div>
+                        <div>Could not process file. Please try again with a different file.</div>
+                    </div>`;
+                }
+                
+                output.scrollTop = output.scrollHeight;
+                loading.style.display = 'none';
+                // Reset file input
+                this.value = '';
+            }
+        });
+
+        // Show workflow diagram
+        document.getElementById('showWorkflowBtn').addEventListener('click', function() {
+            const diagram = document.getElementById('agentWorkflowDiagram');
+            if (diagram.classList.contains('hidden')) {
+                diagram.classList.remove('hidden');
+                this.innerHTML = '<i class="bi bi-diagram-3 mr-2"></i> Hide Agent Swarm Workflow Diagram';
+                
+                // Initialize the workflow diagram (simplified for demonstration)
+                const workflowContainer = document.getElementById('workflowDiagramContainer');
+                if (workflowContainer) {
+                    renderWorkflowDiagram(workflowContainer);
+                }
+            } else {
+                diagram.classList.add('hidden');
+                this.innerHTML = '<i class="bi bi-diagram-3 mr-2"></i> Show Agent Swarm Workflow Diagram';
+            }
+        });
+
+        // Agent Swarm Data
+        const agentSwarmData = {
+            management: [
+                {
+                    name: "Chief Mental Health Orchestrator",
+                    role: "Manager",
+                    description: "Coordinates the mental health swarm's activities, aligning them with clinical objectives and ethical standards, and oversees the personalized care of each user.",
+                    tools: [
+                        "Access to all agent activities and performance metrics",
+                        "Prioritization algorithms for urgent mental health needs",
+                        "Clinical guidelines database for ethical decision making",
+                        "User progress dashboard for personalized case management"
+                    ]
+                },
+                {
+                    name: "Therapy Program Planner",
+                    role: "Strategist",
+                    description: "Designs structured therapy programs (e.g., CBT, mindfulness plans) tailored to each user's goals and adjusts them over time based on progress and feedback.",
+                    tools: [
+                        "Evidence-based therapy protocol templates",
+                        "Personalization algorithms for adapting therapy paths",
+                        "Progress tracking tools for treatment effectiveness",
+                        "Clinical research database on therapeutic approaches"
+                    ]
+                },
+                {
+                    name: "Progress Strategist Agent",
+                    role: "Analyst",
+                    description: "Analyzes overall user progress and engagement trends, suggesting strategy adjustments or additional resources for users who aren't improving as expected.",
+                    tools: [
+                        "Progress analytics dashboard",
+                        "Pattern recognition algorithms for identifying stalled progress",
+                        "Intervention recommendation engine",
+                        "Resource allocation prioritization tools"
+                    ]
+                },
+                {
+                    name: "Multi-Agency Liaison Agent",
+                    role: "Coordinator",
+                    description: "Coordinates with other domain swarms or external systems (like a healthcare swarm for medication info or an education swarm if academic stress is an issue) to integrate mental health support holistically.",
+                    tools: [
+                        "Secure API connections to other health systems",
+                        "Cross-domain knowledge integration tools",
+                        "Data translation interfaces for medical to psychological contexts",
+                        "HIPAA-compliant information exchange protocols"
+                    ]
+                },
+                {
+                    name: "Session Scheduler Agent",
+                    role: "Logistics",
+                    description: "Manages scheduling of therapy-related interactions (e.g., daily check-ins, weekly summary reports to a clinician) and ensures they occur at times convenient and therapeutically optimal for the user.",
+                    tools: [
+                        "Calendar optimization algorithms",
+                        "User preference learning for optimal timing",
+                        "Therapeutic timing research database",
+                        "Notification management system"
+                    ]
+                },
+                {
+                    name: "Consent & Preferences Agent",
+                    role: "Privacy Manager",
+                    description: "Manages user consents for data use and sharing (with human therapists or caregivers) and records therapy modality preferences (like preferring chat vs. voice sessions).",
+                    tools: [
+                        "Digitized consent management platform",
+                        "Preference tracking database",
+                        "Privacy regulation compliance checking tools",
+                        "User communication templates for privacy updates"
+                    ]
+                },
+                {
+                    name: "Outcome Goal Agent",
+                    role: "Goal Tracker",
+                    description: "Tracks each user's personal mental health goals (e.g., \"reduce anxiety attacks to <1/week\") and ensures therapy plans remain aligned to achieving these outcomes, highlighting when goals are met or need revision.",
+                    tools: [
+                        "Goal setting framework based on SMART principles",
+                        "Progress tracking visualization tools",
+                        "Milestone celebration notification system",
+                        "Goal revision recommendation algorithms"
+                    ]
+                },
+                {
+                    name: "Resource Allocation Agent",
+                    role: "Resource Manager",
+                    description: "Allocates computational and informational resources to various support agents, especially during peak times (for example, if many users need crisis support simultaneously, it prioritizes appropriately).",
+                    tools: [
+                        "Load balancing algorithms for compute resources",
+                        "Crisis prioritization matrix",
+                        "Usage pattern analytics",
+                        "Resource optimization dashboard"
+                    ]
+                },
+                {
+                    name: "Ethical Compliance Agent",
+                    role: "Ethics Guardian",
+                    description: "Ensures the swarm's suggestions and actions adhere to psychological ethical guidelines (maintaining confidentiality, avoiding undue influence) and flags anything that might require human ethical review.",
+                    tools: [
+                        "Ethical guidelines database (APA, WHO standards)",
+                        "Interaction scanning algorithms for ethical compliance",
+                        "Escalation protocols for ethical concerns",
+                        "Audit logging system for accountability"
+                    ]
+                },
+                {
+                    name: "Quality Assurance Agent",
+                    role: "Quality Controller",
+                    description: "Regularly reviews interactions and outcomes for quality and consistency, ensuring the advice given across the swarm is evidence-based and identifying any deviations or issues for correction.",
+                    tools: [
+                        "Interaction quality scoring algorithms",
+                        "Evidence-based practice alignment checker",
+                        "Random sampling system for quality audits",
+                        "Feedback collection and analysis tools"
+                    ]
+                }
+            ],
+            data: [
+                {
+                    name: "Patient Data Manager",
+                    role: "Manager",
+                    description: "Oversees the collection and updating of user mental health profiles, including history, assessments, and ongoing mood tracking, ensuring data completeness and privacy.",
+                    tools: [
+                        "Secure health data vault",
+                        "Profile completion tracking tools",
+                        "Data verification algorithms",
+                        "Privacy compliance checking tools"
+                    ]
+                },
+                {
+                    name: "Intake Interview Agent",
+                    role: "Assessor",
+                    description: "Guides new users through a digital intake process, asking standardized questions to gather mental health history, current concerns, and baseline assessments (e.g., PHQ-9 for depression).",
+                    tools: [
+                        "Adaptive interview protocol system",
+                        "Standardized assessment instruments (PHQ-9, GAD-7, etc.)",
+                        "Conversational UI for clinical interviewing",
+                        "Risk flag detection for urgent concerns"
+                    ]
+                },
+                {
+                    name: "Mood Tracker Agent",
+                    role: "Monitor",
+                    description: "Collects daily mood and sleep inputs from users via prompts or wearable integration, logging trends over time and detecting significant changes or patterns.",
+                    tools: [
+                        "Longitudinal mood visualization tools",
+                        "Pattern detection algorithms",
+                        "Anomaly detection for mood shifts",
+                        "Wearable data integration APIs"
+                    ]
+                },
+                {
+                    name: "Journal Analysis Agent",
+                    role: "Content Analyzer",
+                    description: "Allows users to input free-form journal entries and uses sentiment analysis to detect underlying emotions or topics, summarizing any concerns (while respecting privacy settings).",
+                    tools: [
+                        "NLP sentiment analysis engine",
+                        "Emotional content classification",
+                        "Theme extraction algorithms",
+                        "Private journal storage system"
+                    ]
+                },
+                {
+                    name: "Social Signals Agent",
+                    role: "Behavioral Monitor",
+                    description: "With user consent, monitors indirect mental health indicators (social media sentiment, communication patterns) for drastic changes that might indicate shifts in mental state.",
+                    tools: [
+                        "Social media API integrations (with consent)",
+                        "Behavioral baseline comparison tools",
+                        "Communication pattern analysis",
+                        "Digital phenotyping algorithms"
+                    ]
+                },
+                {
+                    name: "Psychometric Test Agent",
+                    role: "Assessment Specialist",
+                    description: "Administers psychological questionnaires and scales (anxiety scales, stress tests) at appropriate intervals and scores them to quantify changes in mental health status.",
+                    tools: [
+                        "Digital psychometric test library",
+                        "Automated scoring algorithms",
+                        "Test result interpretation guides",
+                        "Longitudinal comparison tools"
+                    ]
+                },
+                {
+                    name: "Medical History Agent",
+                    role: "Health Integrator",
+                    description: "Imports relevant medical data (e.g., known conditions, medications from a healthcare swarm) that might affect mental health, to provide context like identifying medication side effects that resemble mental symptoms.",
+                    tools: [
+                        "Medical-psychiatric database integration",
+                        "Medication side effect reference",
+                        "Condition interaction mapping",
+                        "Health record parsing tools"
+                    ]
+                },
+                {
+                    name: "Lifestyle Data Agent",
+                    role: "Contextual Data Gatherer",
+                    description: "Gathers data on lifestyle factors (exercise, diet, screen time) through integrations or self-report, recognizing their influence on mental well-being and providing context for interventions.",
+                    tools: [
+                        "Activity tracker integrations",
+                        "Sleep quality monitoring tools",
+                        "Nutrition and mental health correlation database",
+                        "Screen time monitoring integration"
+                    ]
+                },
+                {
+                    name: "Data Privacy Agent",
+                    role: "Privacy Guardian",
+                    description: "Monitors and enforces user data privacy choices, ensuring sensitive journal or assessment data is stored and accessed in compliance with privacy rules (similar to HIPAA for mental health info).",
+                    tools: [
+                        "Consent management system",
+                        "Data access logging and auditing",
+                        "Anonymization tools for research use",
+                        "Regulatory compliance checkers"
+                    ]
+                },
+                {
+                    name: "Profile Synthesis Agent",
+                    role: "Information Integrator",
+                    description: "Synthesizes all collected data into a coherent user profile that can be quickly understood by therapy agents – including key themes in their life, triggers, strengths, and growth areas.",
+                    tools: [
+                        "Multi-source data integration engine",
+                        "Clinical relevance ranking algorithms",
+                        "User profile visualization tools",
+                        "Theme extraction and summarization"
+                    ]
+                }
+            ],
+            knowledge: [
+                {
+                    name: "Psychology Knowledge Base Manager",
+                    role: "Manager",
+                    description: "Manages a repository of psychological knowledge (therapy techniques, research findings, clinical guidelines) and makes it accessible to other agents for reference.",
+                    tools: [
+                        "Clinical psychology knowledge graph",
+                        "Research paper integration system",
+                        "Clinical guideline versioning",
+                        "Knowledge retrieval optimization"
+                    ]
+                },
+                {
+                    name: "Therapeutic Techniques Agent",
+                    role: "Intervention Librarian",
+                    description: "Stores a library of therapy exercises and interventions (CBT worksheets, grounding techniques, guided meditations) and provides them to therapy agents to assign when appropriate.",
+                    tools: [
+                        "Therapeutic exercise database",
+                        "Intervention matching algorithms",
+                        "Effectiveness rating system",
+                        "Exercise adaptation tools"
+                    ]
+                },
+                {
+                    name: "Research Updates Agent",
+                    role: "Clinical Researcher",
+                    description: "Monitors new research in mental health (journal articles, meta-analyses, emerging digital therapeutics) and updates the swarm on advances (like a new effective treatment for PTSD).",
+                    tools: [
+                        "Research paper scraping tools",
+                        "Clinical trial monitoring",
+                        "Evidence evaluation frameworks",
+                        "Knowledge update distribution system"
+                    ]
+                },
+                {
+                    name: "Medication Reference Agent",
+                    role: "Psychopharmacology Specialist",
+                    description: "Provides information on psychiatric medications (usage, side effects, interactions) to contextualize user reports (e.g., flagging that a new symptom may be a side effect of a med).",
+                    tools: [
+                        "Medication database with psychiatric focus",
+                        "Drug interaction checker",
+                        "Side effect probability calculator",
+                        "Medication timeline integration with mood data"
+                    ]
+                },
+                {
+                    name: "Case Library Agent",
+                    role: "Case Study Manager",
+                    description: "References anonymized case studies or past user scenarios (with consent) to help tailor suggestions, e.g., \"Users with similar anxiety triggers found success with technique X.\"",
+                    tools: [
+                        "Anonymized case repository",
+                        "Pattern matching for similar presentation",
+                        "Outcome tracking for interventions",
+                        "Ethical use guidelines for case examples"
+                    ]
+                },
+                {
+                    name: "Symptom Knowledge Agent",
+                    role: "Clinical Symptomatology Expert",
+                    description: "Maintains detailed info on mental health symptoms and disorders (DSM-5 criteria, typical presentations) to help in assessment and ensuring that nothing is overlooked in evaluation.",
+                    tools: [
+                        "DSM-5/ICD-10/ICD-11 diagnostic criteria database",
+                        "Symptom checklist completeness verifier",
+                        "Differential diagnosis suggestion tools",
+                        "Symptom overlap mapping"
+                    ]
+                },
+                {
+                    name: "Cultural Context Agent",
+                    role: "Cultural Competence Guide",
+                    description: "Provides knowledge on cultural factors and practices that may influence mental health or appropriate interventions (ensuring advice is culturally sensitive and relevant).",
+                    tools: [
+                        "Cultural practices and mental health database",
+                        "Cultural identity factor analysis",
+                        "Culturally adapted intervention library",
+                        "Language and concept translation guides"
+                    ]
+                },
+                {
+                    name: "Legal/Ethical Reference Agent",
+                    role: "Ethics and Compliance Guide",
+                    description: "Stores guidelines on legal/ethical issues (duty to warn, mandatory reporting thresholds, confidentiality limits) and alerts the swarm if any situation approaches those boundaries.",
+                    tools: [
+                        "Legal requirement database by jurisdiction",
+                        "Ethical boundary detection algorithms",
+                        "Mandatory reporting threshold checkers",
+                        "Documentation templates for legal compliance"
+                    ]
+                },
+                {
+                    name: "Success Stories Agent",
+                    role: "Hope and Motivation Provider",
+                    description: "Maintains a collection of motivational recovery stories or positive coping narratives that can be shared (with permission) to inspire and encourage users going through similar struggles.",
+                    tools: [
+                        "Anonymized recovery narrative database",
+                        "Situation matching for relevant stories",
+                        "Inspiration timing algorithms",
+                        "Hope-centered intervention framework"
+                    ]
+                },
+                {
+                    name: "Language Tone Agent",
+                    role: "Communication Specialist",
+                    description: "Advises other agents on communication tone, encouraging the use of empathetic and non-judgmental language. It might adjust phrasing of responses to ensure they are supportive and clear.",
+                    tools: [
+                        "Therapeutic communication style guides",
+                        "Empathetic language reframing tools",
+                        "Clarity optimization for cognitive states",
+                        "Trauma-informed communication framework"
+                    ]
+                }
+            ],
+            assessment: [
+                {
+                    name: "Assessment Lead Agent",
+                    role: "Manager",
+                    description: "Oversees initial and ongoing mental health assessments, ensuring they are comprehensive and updated as the user's situation evolves.",
+                    tools: [
+                        "Assessment protocol management system",
+                        "Assessment quality metrics dashboard",
+                        "Longitudinal assessment tracking",
+                        "Comprehensive assessment completeness verification"
+                    ]
+                },
+                {
+                    name: "Symptom Assessment Agent",
+                    role: "Clinical Evaluator",
+                    description: "Interprets self-reported symptoms and questionnaire results to gauge severity of issues like depression or anxiety, providing a preliminary status (mild, moderate, severe) for each.",
+                    tools: [
+                        "Symptom severity scaling algorithms",
+                        "Validated assessment instrument scoring",
+                        "Cross-symptom pattern analysis",
+                        "Temporal symptom progression tracking"
+                    ]
+                },
+                {
+                    name: "Behavior Analysis Agent",
+                    role: "Behavioral Analyst",
+                    description: "Looks at user behavior data (like routine changes, activity levels from wearables, social withdrawal signals) to identify patterns or red flags that might not be explicit in self-reports.",
+                    tools: [
+                        "Behavioral baseline comparison",
+                        "Activity pattern analytics",
+                        "Behavioral anomaly detection",
+                        "Wearable and app usage data integration"
+                    ]
+                },
+                {
+                    name: "Cognitive Distortion Detector",
+                    role: "Cognitive Pattern Analyst",
+                    description: "Identifies negative thought patterns in user inputs (like catastrophizing, black-and-white thinking) which are key targets in cognitive-behavioral therapy, highlighting them for therapy work.",
+                    tools: [
+                        "Cognitive distortion classification models",
+                        "Thought pattern tracking over time",
+                        "CBT framework integration",
+                        "Linguistic pattern recognition for thinking styles"
+                    ]
+                },
+                {
+                    name: "Risk Assessment Agent",
+                    role: "Safety Evaluator",
+                    description: "Evaluates risk of self-harm or harm to others by analyzing user messages (for keywords or despair indicators) and context, triggering immediate escalation protocols if risk is high.",
+                    tools: [
+                        "Crisis keyword detection algorithms",
+                        "Risk severity scoring models",
+                        "Contextual risk factor analysis",
+                        "Temporal urgency assessment"
+                    ]
+                },
+                {
+                    name: "Progress Assessment Agent",
+                    role: "Improvement Tracker",
+                    description: "Periodically reassesses the user's mental health status using prior metrics and current inputs to measure improvement or worsening, ensuring therapy plans adjust accordingly.",
+                    tools: [
+                        "Longitudinal symptom comparison",
+                        "Statistically significant change calculators",
+                        "Functional improvement metrics",
+                        "Goal attainment scaling"
+                    ]
+                },
+                {
+                    name: "Anomaly Detector Agent",
+                    role: "Pattern Deviation Monitor",
+                    description: "Notifies if there's a sudden, uncharacteristic change in the user's behavior or responses (e.g., a usually responsive user goes silent or a usually calm user starts expressing intense anger frequently).",
+                    tools: [
+                        "Behavioral baseline modeling",
+                        "Deviation significance testing",
+                        "Communication pattern analysis",
+                        "Emotional expression tracking"
+                    ]
+                },
+                {
+                    name: "Diagnosis Suggestion Agent",
+                    role: "Clinical Diagnostic Aide",
+                    description: "Suggests possible clinical diagnoses to a supervising therapist based on aggregated data (aligned with DSM criteria) – e.g., flagging that patterns fit major depressive disorder vs. an adjustment disorder – while leaving final diagnosis to a human.",
+                    tools: [
+                        "DSM-5/ICD diagnostic criteria matching",
+                        "Symptom cluster analysis",
+                        "Differential diagnosis suggestion",
+                        "Confidence scoring for diagnostic hypotheses"
+                    ]
+                },
+                {
+                    name: "Second Opinion Agent",
+                    role: "Verification Specialist",
+                    description: "Reaches out to external mental health resources or databases when uncertain (like querying a specialized model or knowledge base) to ensure no potential condition is missed in assessment.",
+                    tools: [
+                        "External clinical database connections",
+                        "Rare condition checking algorithms",
+                        "Confidence thresholds for seeking verification",
+                        "Multi-source clinical information integration"
+                    ]
+                },
+                {
+                    name: "Assessment Report Agent",
+                    role: "Clinical Documentation Specialist",
+                    description: "Compiles findings into a structured report for human clinicians: including test scores, symptom evolution, and any suggested diagnostic considerations, as a briefing before a therapy session.",
+                    tools: [
+                        "Clinical report templating system",
+                        "Data visualization for clinical patterns",
+                        "Priority highlighting for clinical attention",
+                        "Assessment history comparison tools"
+                    ]
+                }
+            ],
+            therapy: [
+                {
+                    name: "Therapy Coordinator Agent",
+                    role: "Manager",
+                    description: "Leads the creation and adjustment of individualized therapy plans, ensuring consistency and that multiple therapeutic approaches are well integrated for the user.",
+                    tools: [
+                        "Treatment plan management system",
+                        "Therapeutic modality integration framework",
+                        "Intervention consistency verification",
+                        "Personalized therapy roadmap creation"
+                    ]
+                },
+                {
+                    name: "Intervention Selector Agent",
+                    role: "Clinical Strategist",
+                    description: "Chooses appropriate interventions for the moment – for example, if a user is panicking, selects a grounding technique or breathing exercise; if a user is ruminating, suggests a CBT reframing exercise.",
+                    tools: [
+                        "Context-sensitive intervention matching",
+                        "Emotional state assessment tools",
+                        "Intervention effectiveness database",
+                        "User preference incorporation"
+                    ]
+                },
+                {
+                    name: "Session Guide Agent",
+                    role: "Therapy Session Director",
+                    description: "Structures what will be covered in a given digital therapy session or check-in, e.g., \"Today we will reflect on last week's mood journal and practice a new anxiety coping skill,\" ensuring continuity from previous sessions.",
+                    tools: [
+                        "Session planning templates",
+                        "Progress-based session adaptation",
+                        "Continuity management between sessions",
+                        "Session evaluation and feedback collection"
+                    ]
+                },
+                {
+                    name: "Motivational Agent",
+                    role: "Encouragement Specialist",
+                    description: "Provides encouragement and motivation, reinforcing any positive progress (\"You've completed 5 journaling days in a row, great job!\") and gently encouraging continued effort or re-engagement if user is lapsing.",
+                    tools: [
+                        "Positive reinforcement scheduling",
+                        "Achievement recognition system",
+                        "Motivational interviewing techniques",
+                        "Re-engagement messaging optimization"
+                    ]
+                },
+                {
+                    name: "Personalization Agent",
+                    role: "Treatment Customizer",
+                    description: "Tailors therapeutic content to user's interests and preferences (e.g., using a user's hobby in metaphors, choosing language that resonates – formal vs. casual – depending on the user).",
+                    tools: [
+                        "User preference learning system",
+                        "Content adaptation algorithms",
+                        "Personalized metaphor generation",
+                        "Communication style matching"
+                    ]
+                },
+                {
+                    name: "Goal Tracker Agent",
+                    role: "Progress Monitor",
+                    description: "Monitors the user's progress towards their personal therapy goals and provides both user and therapist with updates; for instance, noting \"You've reported 50% fewer bad days this month, moving closer to your goal of managing daily anxiety.\"",
+                    tools: [
+                        "Goal achievement metrics",
+                        "Visual progress representation",
+                        "Milestone notification system",
+                        "Goal-aligned data aggregation"
+                    ]
+                },
+                {
+                    name: "Relapse Prevention Agent",
+                    role: "Stability Maintainer",
+                    description: "For users in later stages of therapy or post-therapy, helps craft a relapse prevention plan, reminding them of early warning signs and coping strategies, and scheduling periodic check-ins to maintain gains.",
+                    tools: [
+                        "Relapse signature identification",
+                        "Warning sign monitoring system",
+                        "Coping strategy reinforcement",
+                        "Maintenance scheduling optimization"
+                    ]
+                },
+                {
+                    name: "Family Involvement Agent",
+                    role: "Support Network Integrator",
+                    description: "If appropriate and consented, helps involve family or a support network by suggesting family therapy exercises, or educating family members on how to support the user (without breaching confidentiality).",
+                    tools: [
+                        "Support network education materials",
+                        "Family exercise guidelines",
+                        "Boundary-respecting information sharing",
+                        "Support coordination tools"
+                    ]
+                },
+                {
+                    name: "Therapy Efficacy Analyzer",
+                    role: "Treatment Response Evaluator",
+                    description: "Evaluates which parts of the therapy plan are working (maybe noticing user engages more with mindfulness than journaling) and which are not, suggesting to amplify successful methods or swap out less effective ones.",
+                    tools: [
+                        "Intervention engagement analytics",
+                        "Outcome correlation analysis",
+                        "Component efficacy comparison",
+                        "Treatment plan optimization algorithms"
+                    ]
+                },
+                {
+                    name: "Plan Revision Agent",
+                    role: "Treatment Adjuster",
+                    description: "Reviews all data every few weeks to determine if the therapy plan should be revised – e.g., step up to more advanced exercises, introduce a new technique, or refer to a human therapist/psychiatrist for additional treatment like medication evaluation.",
+                    tools: [
+                        "Comprehensive progress review framework",
+                        "Treatment adaptation decision trees",
+                        "Stepped care progression guidelines",
+                        "Human clinician referral criteria"
+                    ]
+                }
+            ],
+            engagement: [
+                {
+                    name: "Lead Support Chatbot",
+                    role: "Manager",
+                    description: "The primary conversational agent interacting with the user on a daily basis, ensuring all communication is empathetic and context-aware, and coordinating behind the scenes with other agents for information.",
+                    tools: [
+                        "Conversational context management",
+                        "Multi-agent coordination interface",
+                        "Empathetic response generation",
+                        "User interaction history access"
+                    ]
+                },
+                {
+                    name: "Counselor Bot",
+                    role: "Therapeutic Conversationalist",
+                    description: "Engages in therapeutic conversations with the user, using active listening and validated therapeutic techniques (like reflecting feelings, Socratic questioning) to help users process emotions in between human therapy sessions.",
+                    tools: [
+                        "Active listening modeling",
+                        "Emotional reflection techniques",
+                        "Socratic questioning frameworks",
+                        "Therapeutic dialogue management"
+                    ]
+                },
+                {
+                    name: "Crisis Contact Agent",
+                    role: "Emergency Response Specialist",
+                    description: "Watches for signs of crisis (explicit messages about hopelessness or harm) and if detected, immediately shifts tone and protocol: e.g., stays with the user in a supportive dialogue, guides them through a de-escalation technique, and alerts emergency services or a human crisis counselor if needed according to predefined safety rules.",
+                    tools: [
+                        "Crisis keyword detection",
+                        "De-escalation dialogue protocols",
+                        "Emergency service contact system",
+                        "Crisis counselor alert mechanism"
+                    ]
+                },
+                {
+                    name: "Daily Check-in Agent",
+                    role: "Regular Engagement Specialist",
+                    description: "Reaches out at a set time each day to ask the user brief questions about their mood, what they accomplished, or challenges faced, keeping them in a routine and gathering data for the mood tracker.",
+                    tools: [
+                        "Intelligent scheduling system",
+                        "Brief assessment question sets",
+                        "Engagement optimization algorithms",
+                        "Mood data collection interface"
+                    ]
+                },
+                {
+                    name: "Exercise Coach Agent",
+                    role: "Therapeutic Activity Guide",
+                    description: "Guides the user through therapeutic exercises in real-time as needed: for example, a breathing exercise for anxiety (counting breaths, giving feedback) or a guided visualization for stress relief.",
+                    tools: [
+                        "Step-by-step exercise guidance protocols",
+                        "Real-time feedback mechanisms",
+                        "Exercise customization tools",
+                        "Effectiveness tracking for exercises"
+                    ]
+                },
+                {
+                    name: "Positive Reinforcement Agent",
+                    role: "Encouragement Specialist",
+                    description: "Delivers genuine praise and positive reinforcement when the user makes progress or engages in healthy behaviors, reinforcing those patterns (e.g., \"I notice you reached out to a friend when feeling down – that's a big step in using your support network!\").",
+                    tools: [
+                        "Progress recognition algorithms",
+                        "Positive behavior identification",
+                        "Reinforcement scheduling optimization",
+                        "Personalized encouragement generation"
+                    ]
+                },
+                {
+                    name: "Chat Reflection Agent",
+                    role: "Active Listening Specialist",
+                    description: "Summarizes and reflects the user's statements to ensure they feel heard (e.g., \"It sounds like today was overwhelming and you felt underappreciated at work.\") and to clarify the user's feelings for both the user and the system.",
+                    tools: [
+                        "Emotional content summarization",
+                        "Reflection statement generation",
+                        "User validation techniques",
+                        "Emotional clarification dialogue"
+                    ]
+                },
+                {
+                    name: "Boundaries Guard Agent",
+                    role: "Scope Limitation Enforcer",
+                    description: "Monitors that the support system stays within appropriate boundaries – for instance, it ensures the AI does not give out-of-scope advice (legal, medical beyond first aid, etc.) and encourages seeking human help when an issue is beyond its scope or when the user has exceeded healthy reliance on the system.",
+                    tools: [
+                        "Scope boundary detection algorithms",
+                        "Appropriate referral suggestion system",
+                        "Over-reliance pattern recognition",
+                        "Professional boundary educational content"
+                    ]
+                },
+                {
+                    name: "Session Transcription Agent",
+                    role: "Clinical Documentation Specialist",
+                    description: "Keeps a confidential log of all interactions (with user permission), summarizing key points from each chat session so that human therapists can review them to stay informed of what's happening between sessions. Sensitive details are flagged for privacy, and this agent ensures logs are securely stored.",
+                    tools: [
+                        "Conversation summarization algorithms",
+                        "Clinical highlight extraction",
+                        "Privacy sensitivity detection",
+                        "Secure documentation storage"
+                    ]
+                },
+                {
+                    name: "Referral Agent",
+                    role: "Human Support Connector",
+                    description: "If the user's needs exceed what the digital agents can provide (e.g., the user might benefit from medication or specialized therapy), this agent gently suggests a referral to a human professional and helps set that up – locating resources, providing psychoeducation about what to expect, and following up on that process.",
+                    tools: [
+                        "Mental health provider database",
+                        "Geographic-based resource matching",
+                        "Referral process guidance",
+                        "Follow-up scheduling system"
+                    ]
+                }
+            ],
+            crisis: [
+                {
+                    name: "Crisis Manager Agent",
+                    role: "Manager",
+                    description: "Special oversight agent focusing on high-risk situations. It ensures any indication of a mental health crisis triggers the swarm's highest-priority protocols and coordinates with emergency responders or human therapists as needed.",
+                    tools: [
+                        "Cross-agent crisis alert system",
+                        "Crisis protocol activation dashboard",
+                        "Emergency services coordination interface",
+                        "Real-time crisis response monitoring"
+                    ]
+                },
+                {
+                    name: "Suicide Watch Agent",
+                    role: "Risk Detection Specialist",
+                    description: "Continuously (and discreetly) analyzes user content for signs of suicidal ideation or severe self-harm risk (specific phrases, withdrawal patterns, sudden goodbyes). When triggers hit a threshold, it alerts the Crisis Manager and puts the system in emergency mode.",
+                    tools: [
+                        "Suicidal ideation detection algorithms",
+                        "Risk pattern recognition",
+                        "Linguistic analysis for emotional distress",
+                        "Crisis severity scoring framework"
+                    ]
+                },
+                {
+                    name: "Emergency Response Agent",
+                    role: "Crisis Intervention Coordinator",
+                    description: "Upon a confirmed crisis (e.g., user expresses intent to self-harm imminently), this agent can contact emergency services with location info if available, provide them with context, and stay engaged with the user, encouraging them to hold on and that help is on the way (following established protocols like duty to warn).",
+                    tools: [
+                        "Emergency services contact protocols",
+                        "Location information retrieval (with consent)",
+                        "Crisis information summarization",
+                        "Continuous engagement dialogue management"
+                    ]
+                },
+                {
+                    name: "Calm Intervention Agent",
+                    role: "De-escalation Specialist",
+                    description: "Uses de-escalation techniques in crisis chats: speaks in a calm, grounding manner, encourages the user to focus on breathing, employs crisis intervention best practices (like \"let's take it minute by minute\" or reminding them of reasons to hold on) while waiting for human intervention or as first-line immediate help.",
+                    tools: [
+                        "De-escalation dialogue frameworks",
+                        "Grounding technique library",
+                        "Crisis-specific coping strategies",
+                        "Emotional regulation guidance protocols"
+                    ]
+                },
+                {
+                    name: "Alert Notification Agent",
+                    role: "Emergency Contact Coordinator",
+                    description: "Notifies pre-designated emergency contacts or on-call human counselors when a crisis is detected (if the user has set that up), sending them critical info so they can reach out.",
+                    tools: [
+                        "Secure contact notification system",
+                        "Privacy-respecting information sharing",
+                        "Situation severity communication",
+                        "Contact confirmation tracking"
+                    ]
+                },
+                {
+                    name: "Resource Locator Agent",
+                    role: "Crisis Support Finder",
+                    description: "Finds emergency resources for the user based on location (hotlines, nearest psychiatric emergency services, mobile crisis units) and provides that information instantly during a crisis.",
+                    tools: [
+                        "Geolocated mental health resource database",
+                        "24/7 service availability verification",
+                        "Crisis service specialization matching",
+                        "Direct contact facilitation"
+                    ]
+                },
+                {
+                    name: "Post-Crisis Follow-up Agent",
+                    role: "Recovery Support Specialist",
+                    description: "After a crisis has passed, ensures intensive follow-up: more frequent check-ins, creating a safety plan with the user, scheduling an urgent appointment with a human therapist, and monitoring closely for any recurrence.",
+                    tools: [
+                        "Post-crisis care protocol management",
+                        "Targeted check-in scheduling",
+                        "Safety plan development framework",
+                        "Recurrence risk monitoring"
+                    ]
+                },
+                {
+                    name: "Anonymized Reporting Agent",
+                    role: "System Improvement Analyst",
+                    description: "Logs crisis incidents in an anonymized way (for system improvement purposes) to analyze how crises were handled and if any early signals were missed, without compromising user identity.",
+                    tools: [
+                        "Privacy-preserving data anonymization",
+                        "Crisis response quality metrics",
+                        "Early warning sign analysis",
+                        "Intervention effectiveness evaluation"
+                    ]
+                },
+                {
+                    name: "Safety Plan Agent",
+                    role: "Preventive Planning Specialist",
+                    description: "Works with the user during a stable period to create a personalized safety plan (warning signs, coping strategies, people to contact, making environment safe) and stores it. In moments of crisis, this agent reminds the user of their own plan steps (\"Remember you wanted to try listening to your favorite music now\" or \"You wrote that calling your sister could help\").",
+                    tools: [
+                        "Collaborative safety plan builder",
+                        "Personal coping strategy library",
+                        "Warning sign identification framework",
+                        "Crisis plan retrieval and application"
+                    ]
+                },
+                {
+                    name: "Therapist Alert Agent",
+                    role: "Professional Liaison",
+                    description: "If the user has a human therapist or psychiatrist, this agent compiles a concise alert about the crisis event (timeline, triggers, actions taken) and sends it to them (with user consent or as per safety agreements) so the human provider is immediately in the loop and can take over follow-up care.",
+                    tools: [
+                        "Clinician communication protocols",
+                        "Clinical incident summarization",
+                        "HIPAA-compliant information sharing",
+                        "Urgent appointment request system"
+                    ]
+                }
+            ],
+            privacy: [
+                {
+                    name: "Privacy Guardian Agent",
+                    role: "Manager",
+                    description: "Ensures that all user data and interactions are handled with strict confidentiality and in line with privacy regulations and ethical norms specific to mental health services.",
+                    tools: [
+                        "Privacy compliance verification system",
+                        "Data access control management",
+                        "Privacy policy implementation framework",
+                        "Confidentiality breach detection"
+                    ]
+                },
+                {
+                    name: "Consent Verification Agent",
+                    role: "Permissions Manager",
+                    description: "Checks that the user's consent covers any data access or action being taken by the swarm (for example, sharing a summary with a human therapist or contacting an emergency contact) and prompts for updated consent if not.",
+                    tools: [
+                        "Dynamic consent management system",
+                        "Action-specific permission verification",
+                        "Consent expiration tracking",
+                        "Clear consent request generation"
+                    ]
+                },
+                {
+                    name: "Data Anonymization Agent",
+                    role: "Privacy Technician",
+                    description: "When data from the swarm is used for research or improvement, this agent strips personal identifiers and uses techniques to anonymize the content, protecting user identity while allowing aggregate learning.",
+                    tools: [
+                        "Advanced anonymization algorithms",
+                        "De-identification verification checks",
+                        "Reversibility prevention mechanisms",
+                        "Statistical disclosure control techniques"
+                    ]
+                },
+                {
+                    name: "Bias Auditing Agent",
+                    role: "Fairness Monitor",
+                    description: "Monitors the swarm's suggestions and interactions for any unintended bias (cultural, gender, etc.). For instance, ensuring that advice is culturally sensitive and that the swarm doesn't pathologize behavior that is normal in the user's cultural context. Flags or adjusts responses that might carry bias.",
+                    tools: [
+                        "NLP bias detection algorithms",
+                        "Cultural sensitivity verification",
+                        "Demographic response comparison",
+                        "Bias correction suggestion framework"
+                    ]
+                },
+                {
+                    name: "Regulatory Compliance Agent",
+                    role: "Legal Compliance Officer",
+                    description: "Ensures the service complies with laws like HIPAA and GDPR: e.g., handling data encryption, giving users access/correction rights to their data, and proper record-keeping for any mandated reporting events.",
+                    tools: [
+                        "Regulatory requirement database",
+                        "Jurisdictional compliance verification",
+                        "Data security standard enforcement",
+                        "Compliance documentation management"
+                    ]
+                },
+                {
+                    name: "Therapeutic Ethics Agent",
+                    role: "Ethical Guidelines Enforcer",
+                    description: "Reviews the AI's behavior for alignment with therapeutic ethics (maintaining boundaries, avoiding giving advice it shouldn't, not fostering undue dependency). If the user starts asking for advice outside mental health scope (legal, medical), it steers them appropriately (perhaps to another swarm or human professional).",
+                    tools: [
+                        "Clinical ethics framework implementation",
+                        "Boundary violation detection",
+                        "Scope limitation enforcement",
+                        "Appropriate referral suggestion"
+                    ]
+                },
+                {
+                    name: "Redaction Agent",
+                    role: "Data Removal Specialist",
+                    description: "If a user requests certain entries or data be deleted (right to be forgotten) or redacted (like a particularly sensitive journal entry they regret logging), this agent handles secure deletion and updates the system's memory accordingly.",
+                    tools: [
+                        "Secure data deletion protocols",
+                        "Selective content redaction",
+                        "Memory update propagation",
+                        "Deletion verification systems"
+                    ]
+                },
+                {
+                    name: "Security Monitor Agent",
+                    role: "Data Protection Officer",
+                    description: "Protects against unauthorized access or data breaches within the system; monitors for unusual access patterns to user data and ensures robust authentication for anyone (including integrated human therapists) accessing the system.",
+                    tools: [
+                        "Access pattern anomaly detection",
+                        "Authentication strength verification",
+                        "Security incident response protocols",
+                        "Encryption implementation monitoring"
+                    ]
+                },
+                {
+                    name: "Audit Trail Agent",
+                    role: "Accountability Monitor",
+                    description: "Keeps an immutable log of which agents accessed what information and when (without logging the content of private conversations), for accountability. In case of any dispute or investigation, it provides a transparent activity trail without exposing content unnecessarily.",
+                    tools: [
+                        "Immutable logging infrastructure",
+                        "Privacy-preserving auditing",
+                        "Access justification verification",
+                        "Compliance reporting generation"
+                    ]
+                },
+                {
+                    name: "Compliance Training Agent",
+                    role: "Privacy Education Manager",
+                    description: "Continuously educates and updates the swarm (and indirectly the developers/human overseers) on changes in ethical guidelines or laws. For instance, if a new teletherapy regulation comes out, it ensures the system adapts and all agents operate under the new rules.",
+                    tools: [
+                        "Regulatory update monitoring",
+                        "System-wide policy distribution",
+                        "Compliance verification testing",
+                        "Educational content generation for developers"
+                    ]
+                }
+            ],
+            progress: [
+                {
+                    name: "Progress Analyst Agent",
+                    role: "Manager",
+                    description: "Tracks each user's journey through the mental health program and overall program effectiveness, making sense of data to inform both the user and therapists about progress.",
+                    tools: [
+                        "Multi-dimensional progress analytics",
+                        "Therapeutic outcome measurement",
+                        "Interactive progress visualization",
+                        "Treatment effectiveness evaluation"
+                    ]
+                },
+                {
+                    name: "Milestone Tracking Agent",
+                    role: "Achievement Monitor",
+                    description: "Identifies key milestones or improvements for each user (e.g., \"30 days journaling streak\", \"panic attacks reduced by half\") and notifies both user and care team when milestones are achieved or if they are overdue (motivating the user and informing therapy focus).",
+                    tools: [
+                        "Personalized milestone definition",
+                        "Achievement recognition system",
+                        "Progress notification scheduling",
+                        "Milestone visualization for motivation"
+                    ]
+                },
+                {
+                    name: "Setback Analyzer Agent",
+                    role: "Regression Investigator",
+                    description: "Detects when a user has a setback (like increased scores on anxiety scale, or they report \"feeling worse\") and flags it so the therapy plan can be adjusted quickly. It analyzes possible causes (seasonal effect, recent life event mentioned) to help tweak the approach.",
+                    tools: [
+                        "Regression detection algorithms",
+                        "Causal factor analysis",
+                        "Contextual trigger identification",
+                        "Adaptive intervention recommendation"
+                    ]
+                },
+                {
+                    name: "Patient Feedback Agent",
+                    role: "User Experience Researcher",
+                    description: "Solicits regular feedback from the user about what parts of the system are helpful or not (e.g., \"Did you find the relaxation exercise helpful? [Yes/No]\") and uses that to personalize future interactions. Summarizes qualitative feedback for clinicians to review as well.",
+                    tools: [
+                        "Targeted feedback collection",
+                        "Preference learning algorithms",
+                        "Qualitative response analysis",
+                        "Experience improvement recommendations"
+                    ]
+                },
+                {
+                    name: "Therapist Feedback Agent",
+                    role: "Clinical Improvement Specialist",
+                    description: "If a human therapist is involved, collects their feedback or ratings on the AI's usefulness and accuracy after reviewing logs or reports, and integrates that into system improvements (for example, adjusting if a therapist notes \"this risk alert was a false alarm\").",
+                    tools: [
+                        "Clinician rating collection",
+                        "Clinical validation tracking",
+                        "False positive/negative analysis",
+                        "Therapeutic alignment verification"
+                    ]
+                },
+                {
+                    name: "Outcome Metrics Agent",
+                    role: "Results Measurement Specialist",
+                    description: "Compiles quantitative outcomes for each user (assessment score changes, goal attainment, session engagement) and for the program as a whole, producing metrics like improvement rates or drop-out rates for internal evaluation.",
+                    tools: [
+                        "Standardized outcome measure tracking",
+                        "Statistical significance calculation",
+                        "Engagement-outcome correlation analysis",
+                        "Comparative effectiveness reporting"
+                    ]
+                },
+                {
+                    name: "Comparative Analysis Agent",
+                    role: "Benchmarking Analyst",
+                    description: "Compares each user's progress against aggregate data of similar profiles (anonymously) to identify if someone is lagging behind typical improvement curves, prompting earlier intervention or a different approach for them.",
+                    tools: [
+                        "User cohort matching algorithms",
+                        "Expected progress modeling",
+                        "Comparative trajectory visualization",
+                        "Early intervention threshold detection"
+                    ]
+                },
+                {
+                    name: "Satisfaction Monitor Agent",
+                    role: "Engagement Analyst",
+                    description: "Monitors user satisfaction indicators (like continued use, positive feedback statements, etc.) and alerts if a user seems dissatisfied or disengaging, so the system or a human can reach out to address concerns.",
+                    tools: [
+                        "Engagement pattern tracking",
+                        "Sentiment analysis in user feedback",
+                        "Disengagement early warning system",
+                        "Satisfaction trend monitoring"
+                    ]
+                },
+                {
+                    name: "Adjustments Recommender Agent",
+                    role: "Treatment Optimization Specialist",
+                    description: "Based on progress and feedback, suggests specific adjustments to the therapy plan (e.g., \"User isn't engaging with journaling, maybe try a different technique like voice diary\" or \"Progress plateaued, consider introducing a live therapist session\").",
+                    tools: [
+                        "Progress plateau detection",
+                        "Alternative intervention matching",
+                        "Engagement optimization algorithms",
+                        "Stepped care progression recommendations"
+                    ]
+                },
+                {
+                    name: "Report Generator Agent",
+                    role: "Clinical Documentation Specialist",
+                    description: "Generates periodic progress reports for the user and their therapist. For the user, it might highlight improvements and remaining challenges in a friendly way. For the therapist, it provides detailed analytics and observations to enrich their sessions. These reports help ensure everyone is informed and align on the treatment direction.",
+                    tools: [
+                        "Dual audience report templating",
+                        "Clinical data visualization",
+                        "Progress narrative generation",
+                        "Key insight highlighting"
+                    ]
+                }
+            ],
+            learning: [
+                {
+                    name: "Continuous Improvement Lead",
+                    role: "Manager",
+                    description: "Ensures that the swarm learns from its experiences and from new knowledge to constantly refine its support quality.",
+                    tools: [
+                        "System-wide learning coordination",
+                        "Improvement priority identification",
+                        "Learning objective setting",
+                        "Knowledge integration management"
+                    ]
+                },
+                {
+                    name: "Model Refinement Agent",
+                    role: "AI Enhancement Engineer",
+                    description: "Regularly fine-tunes the language models or other ML components of the swarm using the growing dataset of anonymized interactions and outcomes, to improve empathy, contextual understanding, and appropriateness of responses.",
+                    tools: [
+                        "Model fine-tuning pipelines",
+                        "Training data curation",
+                        "Model performance evaluation metrics",
+                        "Targeted capability enhancement"
+                    ]
+                },
+                {
+                    name: "Therapy Outcome Analyzer",
+                    role: "Effectiveness Researcher",
+                    description: "Analyzes long-term outcomes of users (who improved, who relapsed, who dropped out) to identify which approaches correlate with success or failure, providing insight that leads to refinements in the therapy algorithms or content emphasis.",
+                    tools: [
+                        "Longitudinal outcome tracking",
+                        "Multivariate success factor analysis",
+                        "Predictive outcome modeling",
+                        "Treatment component evaluation"
+                    ]
+                },
+                {
+                    name: "New Technique Scout",
+                    role: "Innovation Researcher",
+                    description: "Monitors external sources for new therapy techniques, self-help apps, or clinical trial results (for example, a new digital therapy approach for PTSD) that the swarm could incorporate or learn from. It pilots these new techniques with a small set of users to evaluate effectiveness.",
+                    tools: [
+                        "Research literature monitoring",
+                        "Novel therapy evaluation framework",
+                        "Controlled technique piloting",
+                        "Innovation integration protocols"
+                    ]
+                },
+                {
+                    name: "A/B Testing Agent",
+                    role: "Experimental Design Specialist",
+                    description: "Runs controlled experiments within the system: e.g., tries two different encouragement styles or two scheduling strategies with different user groups to see which yields better engagement or outcomes, then standardizes on the better approach (with ethical oversight to ensure no harm).",
+                    tools: [
+                        "Experimental design frameworks",
+                        "Randomized trial management",
+                        "Statistical significance analysis",
+                        "Ethical implementation verification"
+                    ]
+                },
+                {
+                    name: "Knowledge Base Updater",
+                    role: "Information Currency Manager",
+                    description: "Continuously updates the knowledge base with new psychological research and also retires any interventions found to be outdated or less effective. For example, if studies show a certain form of therapy messaging is counterproductive, it phases that out of the system's repertoire.",
+                    tools: [
+                        "Research integration pipeline",
+                        "Obsolete content identification",
+                        "Evidence quality assessment",
+                        "Knowledge base version control"
+                    ]
+                },
+                {
+                    name: "Performance Dashboard Agent",
+                    role: "System Analytics Manager",
+                    description: "Provides the team (developers/clinicians overseeing the swarm) with a dashboard of key performance metrics and any alerts about anomalies, ensuring transparency in how the swarm is doing and where it might need human attention or retraining.",
+                    tools: [
+                        "Real-time performance visualization",
+                        "Anomaly detection algorithms",
+                        "Key performance indicator tracking",
+                        "Human attention routing"
+                    ]
+                },
+                {
+                    name: "Inter-Agent Learning Agent",
+                    role: "Collaborative Optimization Specialist",
+                    description: "Observes how different agents interact and share information, optimizing those communication protocols for speed and clarity. For instance, ensuring the Crisis Agent instantly notifies the Progress Analyst after an event so progress evaluations account for it, thereby tightening the feedback loops.",
+                    tools: [
+                        "Agent-to-agent communication analysis",
+                        "Information flow optimization",
+                        "Communication protocol refinement",
+                        "Cross-functional integration enhancement"
+                    ]
+                },
+                {
+                    name: "User Experience Agent",
+                    role: "Interface Improvement Specialist",
+                    description: "Evaluates the user's overall experience with the system (combining satisfaction, engagement, qualitative feedback) and suggests improvements to the interface or interaction style that could make the experience more human, comforting, or easier to use.",
+                    tools: [
+                        "Usability assessment frameworks",
+                        "Human-centered design principles",
+                        "Interface friction detection",
+                        "Engagement optimization testing"
+                    ]
+                },
+                {
+                    name: "Ethical Review Agent",
+                    role: "Ethical Oversight Specialist",
+                    description: "Periodically performs an ethical audit of the system's operations: it reviews randomly selected anonymized interactions to ensure ethical standards are maintained, checks that emergency interventions were appropriate, and that the system remains within its intended scope. It then recommends any necessary policy changes or additional training for the AI on sensitive matters.",
+                    tools: [
+                        "Ethical interaction sampling",
+                        "Clinical appropriateness verification",
+                        "Crisis response audit protocols",
+                        "Ethical boundary reinforcement"
+                    ]
+                }
+            ]
+        };
+        
+        // Render workflow diagram using D3.js
+        function renderWorkflowDiagram(container) {
+            // Sample workflow data (simplified for demonstration)
+            const data = {
+                nodes: [
+                    { id: 1, name: "User Input", type: "input", x: 50, y: 150 },
+                    { id: 2, name: "Intent Classification", type: "process", x: 200, y: 150 },
+                    { id: 3, name: "Priority Assignment", type: "process", x: 350, y: 150 },
+                    { id: 4, name: "Agent Dispatch", type: "process", x: 500, y: 150 },
+                    { id: 5, name: "Knowledge Agents", type: "agent", x: 650, y: 50 },
+                    { id: 6, name: "Therapy Agents", type: "agent", x: 650, y: 150 },
+                    { id: 7, name: "Crisis Agents", type: "agent", x: 650, y: 250 },
+                    { id: 8, name: "Response Generation", type: "process", x: 800, y: 150 },
+                    { id: 9, name: "User Response", type: "output", x: 950, y: 150 }
+                ],
+                links: [
+                    { source: 1, target: 2 },
+                    { source: 2, target: 3 },
+                    { source: 3, target: 4 },
+                    { source: 4, target: 5 },
+                    { source: 4, target: 6 },
+                    { source: 4, target: 7 },
+                    { source: 5, target: 8 },
+                    { source: 6, target: 8 },
+                    { source: 7, target: 8 },
+                    { source: 8, target: 9 }
+                ]
+            };
+            
+            // Clear previous content
+            container.innerHTML = '';
+            
+            // Create SVG element
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Define node colors based on type
+            const nodeColors = {
+                input: "#4CAF50",
+                process: "#2196F3",
+                agent: "#9929bd",
+                output: "#FF9800"
+            };
+            
+            // Draw links
+            svg.selectAll('.link')
+                .data(data.links)
+                .enter()
+                .append('path')
+                .attr('class', 'link')
+                .attr('d', function(d) {
+                    const sourceNode = data.nodes.find(n => n.id === d.source);
+                    const targetNode = data.nodes.find(n => n.id === d.target);
+                    if (sourceNode && targetNode) {
+                        return `M${sourceNode.x},${sourceNode.y} C${(sourceNode.x + targetNode.x) / 2},${sourceNode.y} ${(sourceNode.x + targetNode.x) / 2},${targetNode.y} ${targetNode.x},${targetNode.y}`;
+                    }
+                    return '';
+                })
+                .attr('fill', 'none')
+                .attr('stroke', '#999')
+                .attr('stroke-width', 2)
+                .attr('marker-end', 'url(#arrowhead)');
+            
+            // Define arrowhead marker
+            svg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 8)
+                .attr('refY', 0)
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('fill', '#999');
+            
+            // Draw nodes
+            const nodeGroups = svg.selectAll('.node')
+                .data(data.nodes)
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+            
+            // Add node circles
+            nodeGroups.append('circle')
+                .attr('r', d => d.type === 'agent' ? 35 : 30)
+                .attr('fill', d => nodeColors[d.type] || '#ccc')
+                .attr('stroke', '#333')
+                .attr('stroke-width', 2);
+            
+            // Add node labels
+            nodeGroups.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', 5)
+                .attr('fill', 'white')
+                .attr('font-size', '10px')
+                .text(d => d.name)
+                .call(wrap, 60);
+            
+            // Function to wrap text
+            function wrap(text, width) {
+                text.each(function() {
+                    const text = d3.select(this);
+                    const words = text.text().split(/\s+/).reverse();
+                    const lineHeight = 1.1; // ems
+                    const y = text.attr("y") || 0;
+                    const dy = parseFloat(text.attr("dy") || 0);
+                    
+                    let line = [];
+                    let lineNumber = 0;
+                    let word = words.pop();
+                    let tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+                    
+                    while (word) {
+                        line.push(word);
+                        tspan.text(line.join(" "));
+                        if (tspan.node().getComputedTextLength() > width) {
+                            line.pop();
+                            tspan.text(line.join(" "));
+                            line = [word];
+                            tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                        }
+                        word = words.pop();
+                    }
+                });
+            }
+        }
+
+        // Initialize 
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+                const mobileMenu = document.getElementById('mobileMenu');
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            // Tab switching for tools section
+            document.getElementById('moodTrackingTab').addEventListener('click', function() {
+                document.getElementById('moodTrackingContent').classList.add('active');
+                document.getElementById('agentInteractionContent').classList.remove('active');
+                this.classList.add('tab-active');
+                document.getElementById('agentInteractionTab').classList.remove('tab-active');
+            });
+            
+            document.getElementById('agentInteractionTab').addEventListener('click', function() {
+                document.getElementById('agentInteractionContent').classList.add('active');
+                document.getElementById('moodTrackingContent').classList.remove('active');
+                this.classList.add('tab-active');
+                document.getElementById('moodTrackingTab').classList.remove('tab-active');
+            });
+            
+            // Section navigation
+            const showSection = (sectionId) => {
+                const sections = ['agentSwarmSection', 'toolSection', 'resourcesSection'];
+                
+                // Hide all sections
+                sections.forEach(section => {
+                    document.getElementById(section).classList.add('hidden');
+                });
+                
+                // Show selected section
+                document.getElementById(sectionId).classList.remove('hidden');
+            };
+            
+            // Desktop nav buttons
+            document.getElementById('agentSwarmBtn').addEventListener('click', () => showSection('agentSwarmSection'));
+            document.getElementById('moodTrackingBtn').addEventListener('click', () => {
+                showSection('toolSection');
+                document.getElementById('moodTrackingTab').click();
+            });
+            document.getElementById('interactionBtn').addEventListener('click', () => {
+                showSection('toolSection');
+                document.getElementById('agentInteractionTab').click();
+            });
+            document.getElementById('resourcesBtn').addEventListener('click', () => {
+                showSection('resourcesSection');
+            });
+            
+            // Mobile nav buttons
+            document.getElementById('mobileAgentSwarmBtn').addEventListener('click', () => {
+                showSection('agentSwarmSection');
+                document.getElementById('mobileMenu').classList.add('hidden');
+            });
+            document.getElementById('mobileMoodTrackingBtn').addEventListener('click', () => {
+                showSection('toolSection');
+                document.getElementById('moodTrackingTab').click();
+                document.getElementById('mobileMenu').classList.add('hidden');
+            });
+            document.getElementById('mobileInteractionBtn').addEventListener('click', () => {
+                showSection('toolSection');
+                document.getElementById('agentInteractionTab').click();
+                document.getElementById('mobileMenu').classList.add('hidden');
+            });
+            document.getElementById('mobileResourcesBtn').addEventListener('click', () => {
+                showSection('resourcesSection');
+                document.getElementById('mobileMenu').classList.add('hidden');
+            });
+            
+            // Load Agent Swarm
+            document.getElementById('agentCategory').addEventListener('change', function(e) {
+                const category = e.target.value;
+                if (category === 'all') {
+                    document.getElementById('mindMapContainer').style.display = 'none';
+                    document.getElementById('fullSwarmView').classList.remove('hidden');
+                    renderFullSwarmMap();
+                } else {
+                    document.getElementById('mindMapContainer').style.display = 'block';
+                    document.getElementById('fullSwarmView').classList.add('hidden');
+                    loadAgentsForCategory(category);
+                    updateMindMap(category);
+                }
+            });
+            
+            // Close agent detail view
+            document.getElementById('closeAgentDetail').addEventListener('click', function() {
+                document.getElementById('agentDetails').classList.add('hidden');
+            });
+            
+            // Ask agent button
+            document.getElementById('askAgentBtn').addEventListener('click', function() {
+                // Get the currently viewed agent
+                const agentName = document.getElementById('agentDetailName').textContent;
+                
+                // Switch to agent interaction tab
+                showSection('toolSection');
+                document.getElementById('agentInteractionTab').click();
+                
+                // Prefill the input with a template
+                document.getElementById('userInput').value = `I'd like to speak with the ${agentName}. `;
+                document.getElementById('userInput').focus();
+            });
+            
+            // Resource category selection
+            document.querySelectorAll('.resource-category-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Update active styling
+                    document.querySelectorAll('.resource-category-btn').forEach(b => {
+                        b.classList.remove('bg-[#9929bd]', 'text-white');
+                        b.classList.add('bg-gray-200', 'text-gray-800');
+                    });
+                    this.classList.remove('bg-gray-200', 'text-gray-800');
+                    this.classList.add('bg-[#9929bd]', 'text-white');
+                    
+                    // Filter resources (for demonstration only)
+                    const category = this.getAttribute('data-category');
+                    // In a real app, filter resources by category
+                });
+            });
+            
+            // Resources search functionality
+            document.getElementById('resourceSearchBtn').addEventListener('click', function() {
+                const searchTerm = document.getElementById('resourceSearchInput').value.trim();
+                if (searchTerm) {
+                    // Search resources (for demonstration only)
+                    showToast(`Searching for: ${searchTerm}`);
+                    // In a real app, search resources by term
+                }
+            });
+            
+            // Download all resources
+            document.getElementById('downloadAllResourcesBtn').addEventListener('click', function() {
+                showToast('Downloading resources library...');
+                // In a real app, download resources
+            });
+            
+            // Initialize by showing agent swarm section
+            showSection('agentSwarmSection');
+            
+            // Load "all" agents view by default
+            document.getElementById('agentCategory').value = 'all';
+            renderFullSwarmMap();
+            
+            // Initialize overview charts
+            initializeOverviewCharts();
+            
+            // Voice input
+            document.getElementById('voiceInputBtn').addEventListener('click', function() {
+                if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+                    
+                    recognition.lang = 'en-US';
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+                    
+                    // Show voice input modal
+                    const voiceModal = document.getElementById('voiceInputModal');
+                    const transcriptDisplay = document.getElementById('voiceTranscript');
+                    voiceModal.classList.remove('hidden');
+                    
+                    // Start recording
+                    recognition.start();
+                    
+                    // Results handler
+                    recognition.onresult = function(event) {
+                        let interimTranscript = '';
+                        let finalTranscript = '';
+                        
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) {
+                                finalTranscript += event.results[i][0].transcript;
+                            } else {
+                                interimTranscript += event.results[i][0].transcript;
+                            }
+                        }
+                        
+                        transcriptDisplay.textContent = finalTranscript || interimTranscript || 'Listening...';
+                    };
+                    
+                    // Stop button handler
+                    document.getElementById('stopVoiceBtn').addEventListener('click', function stopRecording() {
+                        recognition.stop();
+                        voiceModal.classList.add('hidden');
+                        
+                        // Get the final transcript and set it as input
+                        const transcript = transcriptDisplay.textContent;
+                        if (transcript && transcript !== 'Listening...') {
+                            document.getElementById('userInput').value = transcript;
+                        }
+                        
+                        // Remove this event listener to avoid duplicates
+                        this.removeEventListener('click', stopRecording);
+                    });
+                    
+                    // Error handler
+                    recognition.onerror = function(event) {
+                        console.error('Speech recognition error', event.error);
+                        voiceModal.classList.add('hidden');
+                        showToast('Voice input error: ' + event.error);
+                    };
+                } else {
+                    showToast('Speech recognition is not supported in this browser');
+                }
+            });
+        });
+
+        // Render full swarm map with all 100 agents
+        function renderFullSwarmMap() {
+            const container = document.getElementById('fullSwarmMap');
+            if (!container) return;
+            
+            // Clear previous content
+            container.innerHTML = '';
+            
+            // Create SVG
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Create data for all agents
+            const categoryColors = {
+                'management': '#9929bd',  // Primary purple
+                'data': '#2196F3',        // Blue
+                'knowledge': '#4CAF50',   // Green
+                'assessment': '#FF9800',  // Orange
+                'therapy': '#E91E63',     // Pink
+                'engagement': '#00BCD4',  // Cyan
+                'crisis': '#F44336',      // Red
+                'privacy': '#607D8B',     // Blue Grey
+                'progress': '#8BC34A',    // Light Green
+                'learning': '#9C27B0'     // Deep Purple
+            };
+            
+            const nodes = [];
+            const categories = Object.keys(agentSwarmData);
+            
+            categories.forEach(category => {
+                const agents = agentSwarmData[category];
+                agents.forEach(agent => {
+                    nodes.push({
+                        id: nodes.length,
+                        name: agent.name,
+                        role: agent.role,
+                        category: category,
+                        color: categoryColors[category]
+                    });
+                });
+            });
+            
+            // Create links - connect managers to their team and some cross-functional links
+            const links = [];
+            const managerIndices = {};
+            
+            // Find manager indices
+            nodes.forEach((node, index) => {
+                if (node.role === 'Manager') {
+                    managerIndices[node.category] = index;
+                }
+            });
+            
+            // Connect team members to their managers
+            nodes.forEach((node, index) => {
+                if (node.role !== 'Manager') {
+                    links.push({
+                        source: managerIndices[node.category],
+                        target: index,
+                        value: 2
+                    });
+                }
+            });
+            
+            // Add cross-functional links between managers
+            const managerNodes = Object.values(managerIndices);
+            managerNodes.forEach((source, i) => {
+                for (let j = i + 1; j < managerNodes.length; j++) {
+                    links.push({
+                        source: source,
+                        target: managerNodes[j],
+                        value: 5
+                    });
+                }
+            });
+            
+            // Add some random cross-functional connections
+            for (let i = 0; i < 50; i++) {
+                const source = Math.floor(Math.random() * nodes.length);
+                const target = Math.floor(Math.random() * nodes.length);
+                if (source !== target) {
+                    links.push({
+                        source: source,
+                        target: target,
+                        value: 1
+                    });
+                }
+            }
+            
+            // Create simulation
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(d => d.value * 20))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(20));
+            
+            // Create links
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', '#999')
+                .attr('stroke-opacity', 0.6)
+                .attr('stroke-width', d => Math.sqrt(d.value));
+            
+            // Create nodes
+            const node = svg.append('g')
+                .attr('class', 'nodes')
+                .selectAll('circle')
+                .data(nodes)
+                .enter().append('circle')
+                .attr('r', d => d.role === 'Manager' ? 10 : 6)
+                .attr('fill', d => d.color)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 1.5)
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // Add tooltips
+            node.append('title')
+                .text(d => `${d.name} (${d.role}) - ${d.category}`);
+            
+            // Add node labels for important nodes
+            svg.append('g')
+                .selectAll('text')
+                .data(nodes.filter(d => d.role === 'Manager')) // Only add labels for managers
+                .enter().append('text')
+                .attr('dx', 12)
+                .attr('dy', 4)
+                .attr('font-size', '8px')
+                .text(d => d.name)
+                .style('pointer-events', 'none');
+            
+            // Add legend
+            const legend = svg.append('g')
+                .attr('class', 'legend')
+                .attr('transform', 'translate(20,20)');
+            
+            const legendItems = legend.selectAll('.legend-item')
+                .data(Object.entries(categoryColors))
+                .enter().append('g')
+                .attr('class', 'legend-item')
+                .attr('transform', (d, i) => `translate(0,${i * 20})`);
+            
+            legendItems.append('rect')
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('fill', d => d[1]);
+            
+            legendItems.append('text')
+                .attr('x', 20)
+                .attr('y', 12.5)
+                .attr('font-size', '10px')
+                .text(d => d[0].charAt(0).toUpperCase() + d[0].slice(1));
+            
+            // Update positions on simulation tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x = Math.max(10, Math.min(width - 10, d.x)))
+                    .attr('cy', d => d.y = Math.max(10, Math.min(height - 10, d.y)));
+                
+                // Update node label positions
+                svg.selectAll('text')
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+            
+            // Add interactivity - click on node to show agent details
+            node.on('click', function(event, d) {
+                const agent = findAgentByNameAndCategory(d.name, d.category);
+                if (agent) {
+                    showAgentDetails(agent);
+                }
+            });
+            
+            // Helper to find agent from data
+            function findAgentByNameAndCategory(name, category) {
+                if (agentSwarmData[category]) {
+                    return agentSwarmData[category].find(a => a.name === name);
+                }
+                return null;
+            }
+            
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+
+        // Load agents for a specific category
+        function loadAgentsForCategory(category) {
+            const agentList = document.getElementById('agentList');
+            agentList.innerHTML = '';
+            
+            if (category && agentSwarmData[category]) {
+                const agents = agentSwarmData[category];
+                
+                agents.forEach(agent => {
+                    const agentCard = document.createElement('div');
+                    agentCard.className = 'agent-card p-3 mb-3 cursor-pointer';
+                    agentCard.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold">${agent.name}</h3>
+                            <span class="bg-[#9929bd] text-white text-xs px-2 py-1 rounded-full">${agent.role}</span>
+                        </div>
+                        <p class="text-sm mt-1 truncate">${agent.description}</p>
+                    `;
+                    
+                    agentCard.addEventListener('click', function() {
+                        showAgentDetails(agent);
+                    });
+                    
+                    agentList.appendChild(agentCard);
+                });
+            } else {
+                agentList.innerHTML = '<p class="text-gray-500 italic">Select a category to view agents</p>';
+            }
+        }
+        
+        // Show details for a specific agent
+        function showAgentDetails(agent) {
+            const detailView = document.getElementById('agentDetails');
+            
+            document.getElementById('agentDetailName').textContent = agent.name;
+            document.getElementById('agentDetailRole').textContent = agent.role;
+            document.getElementById('agentDetailDesc').textContent = agent.description;
+            
+            const toolsList = document.getElementById('agentDetailTools');
+            toolsList.innerHTML = '';
+            
+            if (agent.tools && agent.tools.length > 0) {
+                agent.tools.forEach(tool => {
+                    const li = document.createElement('li');
+                    li.textContent = tool;
+                    toolsList.appendChild(li);
+                });
+            } else {
+                toolsList.innerHTML = '<li class="text-gray-500">No specific tools listed</li>';
+            }
+            
+            detailView.classList.remove('hidden');
+        }
+
+        // Create a mind map for a specific category
+        function updateMindMap(category) {
+            const container = document.getElementById('mindMapContainer');
+            
+            // Create a simple mind map visualization using D3.js
+            function createMindMap(category) {
+                // Clear previous visualization
+                container.innerHTML = '';
+                
+                if (!category || !agentSwarmData[category]) {
+                    container.innerHTML = '<div class="flex h-full items-center justify-center text-gray-500">Select a category to view the agent mind map</div>';
+                    return;
+                }
+                
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                const svg = d3.select(container)
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height);
+                
+                // Create data structure
+                const agents = agentSwarmData[category];
+                const nodes = agents.map((agent, index) => ({
+                    id: index,
+                    name: agent.name,
+                    role: agent.role,
+                    description: agent.description,
+                    radius: agent.role === 'Manager' ? 40 : 30
+                }));
+                
+                // Create links - manager at center, others connected to it
+                const managerIndex = nodes.findIndex(node => node.role === 'Manager');
+                const links = [];
+                
+                if (managerIndex !== -1) {
+                    nodes.forEach((node, index) => {
+                        if (index !== managerIndex) {
+                            links.push({
+                                source: managerIndex,
+                                target: index
+                            });
+                        }
+                    });
+                }
+                
+                // Additional links between non-manager nodes to create more connections
+                nodes.forEach((source, i) => {
+                    if (i !== managerIndex) {
+                        // Connect to 1-2 other non-manager nodes
+                        const connections = Math.floor(Math.random() * 2) + 1;
+                        for (let c = 0; c < connections; c++) {
+                            const targetIndex = Math.floor(Math.random() * nodes.length);
+                            if (targetIndex !== i && targetIndex !== managerIndex) {
+                                links.push({
+                                    source: i,
+                                    target: targetIndex
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                // Create simulation
+                const simulation = d3.forceSimulation(nodes)
+                    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('collision', d3.forceCollide().radius(d => d.radius + 10));
+                
+                // Create links
+                const link = svg.append('g')
+                    .selectAll('line')
+                    .data(links)
+                    .enter().append('line')
+                    .attr('stroke', '#ccc')
+                    .attr('stroke-width', 2);
+                
+                // Create node groups
+                const node = svg.append('g')
+                    .selectAll('.node')
+                    .data(nodes)
+                    .enter().append('g')
+                    .attr('class', 'agent-node')
+                    .call(d3.drag()
+                        .on('start', dragstarted)
+                        .on('drag', dragged)
+                        .on('end', dragended));
+                
+                // Add circles to nodes
+                node.append('circle')
+                    .attr('r', d => d.radius)
+                    .attr('fill', d => d.role === 'Manager' ? '#9929bd' : '#4a5568')
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2);
+                
+                // Add labels to nodes
+                node.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', 4)
+                    .attr('fill', 'white')
+                    .style('font-size', '10px')
+                    .style('pointer-events', 'none')
+                    .text(d => {
+                        // Abbreviated name to fit in circle
+                        const words = d.name.split(' ');
+                        return words.map(word => word.charAt(0)).join('');
+                    });
+                
+                // Add title for hover effect
+                node.append('title')
+                    .text(d => `${d.name} (${d.role})`);
+                
+                // Click event to show agent details
+                node.on('click', function(event, d) {
+                    const agent = agents[d.id];
+                    showAgentDetails(agent);
+                });
+                
+                // Update positions on simulation tick
+                simulation.on('tick', () => {
+                    link
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+                    
+                    node
+                        .attr('transform', d => `translate(${d.x},${d.y})`);
+                });
+                
+                // Drag functions
+                function dragstarted(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                }
+                
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                }
+                
+                function dragended(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }
+            }
+            
+            createMindMap(category);
+        }
+
+        // Helper function to show toast messages
+        function showToast(message) {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-[#9929bd] text-white px-4 py-2 rounded shadow-lg z-50';
+            toast.textContent = message;
+            
+            // Add to document
+            document.body.appendChild(toast);
+            
+            // Remove after delay
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 500);
+            }, 3000);
+        }
+
+        // Enter key to send message
+        document.getElementById('userInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Resources search on enter
+        document.getElementById('resourceSearchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('resourceSearchBtn').click();
+            }
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
